@@ -4,3 +4,6 @@
 DerivedData/
 *.xcuserstate
 Resources/python/.venv/
+Resources/python/vendor/
+Resources/python/**/__pycache__/
+Resources/python/**/*.pyc
