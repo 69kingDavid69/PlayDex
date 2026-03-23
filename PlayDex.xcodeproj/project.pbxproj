@@ -1,0 +1,335 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000200 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000100 /* AppDelegate.swift */; };
+		A10000000000000000000201 /* PlayDexApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000101 /* PlayDexApp.swift */; };
+		A10000000000000000000202 /* Track.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000103 /* Track.swift */; };
+		A10000000000000000000203 /* DownloadJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000104 /* DownloadJob.swift */; };
+		A10000000000000000000204 /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000105 /* Playlist.swift */; };
+		A10000000000000000000205 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000106 /* KeychainStore.swift */; };
+		A10000000000000000000206 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000107 /* SettingsStore.swift */; };
+		A10000000000000000000207 /* iTunesLibraryParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000108 /* iTunesLibraryParser.swift */; };
+		A10000000000000000000208 /* PythonBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000109 /* PythonBridge.swift */; };
+		A10000000000000000000209 /* DownloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000010A /* DownloadManager.swift */; };
+		A1000000000000000000020A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000010B /* ContentView.swift */; };
+		A1000000000000000000020B /* PlaylistSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000010C /* PlaylistSidebarView.swift */; };
+		A1000000000000000000020C /* TrackListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000010D /* TrackListView.swift */; };
+		A1000000000000000000020D /* DownloadQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000010E /* DownloadQueueView.swift */; };
+		A1000000000000000000020E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000010F /* SettingsView.swift */; };
+		A1000000000000000000020F /* python in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000110 /* python */; };
+		A10000000000000000000210 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000112 /* EmptyStateView.swift */; };
+		A10000000000000000000211 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000113 /* Assets.xcassets */; };
+		A10000000000000000000212 /* CSVLibraryParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000114 /* CSVLibraryParser.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A10000000000000000000100 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A10000000000000000000101 /* PlayDexApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayDexApp.swift; sourceTree = "<group>"; };
+		A10000000000000000000102 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A10000000000000000000103 /* Track.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Track.swift; sourceTree = "<group>"; };
+		A10000000000000000000104 /* DownloadJob.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadJob.swift; sourceTree = "<group>"; };
+		A10000000000000000000105 /* Playlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Playlist.swift; sourceTree = "<group>"; };
+		A10000000000000000000106 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		A10000000000000000000107 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
+		A10000000000000000000108 /* iTunesLibraryParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iTunesLibraryParser.swift; sourceTree = "<group>"; };
+		A10000000000000000000109 /* PythonBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PythonBridge.swift; sourceTree = "<group>"; };
+		A1000000000000000000010A /* DownloadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadManager.swift; sourceTree = "<group>"; };
+		A1000000000000000000010B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A1000000000000000000010C /* PlaylistSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistSidebarView.swift; sourceTree = "<group>"; };
+		A1000000000000000000010D /* TrackListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackListView.swift; sourceTree = "<group>"; };
+		A1000000000000000000010E /* DownloadQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadQueueView.swift; sourceTree = "<group>"; };
+		A1000000000000000000010F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A10000000000000000000110 /* python */ = {isa = PBXFileReference; lastKnownFileType = folder; path = python; sourceTree = "<group>"; };
+		A10000000000000000000111 /* PlayDex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PlayDex.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000112 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
+		A10000000000000000000113 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A10000000000000000000114 /* CSVLibraryParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSVLibraryParser.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A1000000000000000000000B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000003 /* App */,
+				A10000000000000000000004 /* Models */,
+				A10000000000000000000005 /* Services */,
+				A10000000000000000000006 /* Views */,
+				A10000000000000000000007 /* Resources */,
+				A10000000000000000000002 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000000000000000000002 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000111 /* PlayDex.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000003 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000100 /* AppDelegate.swift */,
+				A10000000000000000000101 /* PlayDexApp.swift */,
+				A10000000000000000000102 /* Info.plist */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000004 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000104 /* DownloadJob.swift */,
+				A10000000000000000000105 /* Playlist.swift */,
+				A10000000000000000000103 /* Track.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000005 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000114 /* CSVLibraryParser.swift */,
+				A1000000000000000000010A /* DownloadManager.swift */,
+				A10000000000000000000108 /* iTunesLibraryParser.swift */,
+				A10000000000000000000106 /* KeychainStore.swift */,
+				A10000000000000000000109 /* PythonBridge.swift */,
+				A10000000000000000000107 /* SettingsStore.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000006 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A1000000000000000000010B /* ContentView.swift */,
+				A1000000000000000000010E /* DownloadQueueView.swift */,
+				A10000000000000000000112 /* EmptyStateView.swift */,
+				A1000000000000000000010C /* PlaylistSidebarView.swift */,
+				A1000000000000000000010F /* SettingsView.swift */,
+				A1000000000000000000010D /* TrackListView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000007 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000113 /* Assets.xcassets */,
+				A10000000000000000000110 /* python */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000000000000000000008 /* PlayDex */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1000000000000000000000E /* Build configuration list for PBXNativeTarget "PlayDex" */;
+			buildPhases = (
+				A1000000000000000000000A /* Sources */,
+				A1000000000000000000000B /* Frameworks */,
+				A1000000000000000000000C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PlayDex;
+			productName = PlayDex;
+			productReference = A10000000000000000000111 /* PlayDex.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10000000000000000000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A10000000000000000000008 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = A1000000000000000000000D /* Build configuration list for PBXProject "PlayDex" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A10000000000000000000001;
+			productRefGroup = A10000000000000000000002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10000000000000000000008 /* PlayDex */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1000000000000000000000C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000211 /* Assets.xcassets in Resources */,
+				A1000000000000000000020F /* python in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A1000000000000000000000A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000200 /* AppDelegate.swift in Sources */,
+				A10000000000000000000201 /* PlayDexApp.swift in Sources */,
+				A10000000000000000000202 /* Track.swift in Sources */,
+				A10000000000000000000203 /* DownloadJob.swift in Sources */,
+				A10000000000000000000204 /* Playlist.swift in Sources */,
+				A10000000000000000000205 /* KeychainStore.swift in Sources */,
+				A10000000000000000000206 /* SettingsStore.swift in Sources */,
+				A10000000000000000000207 /* iTunesLibraryParser.swift in Sources */,
+				A10000000000000000000208 /* PythonBridge.swift in Sources */,
+				A10000000000000000000209 /* DownloadManager.swift in Sources */,
+				A1000000000000000000020A /* ContentView.swift in Sources */,
+				A1000000000000000000020B /* PlaylistSidebarView.swift in Sources */,
+				A1000000000000000000020C /* TrackListView.swift in Sources */,
+				A1000000000000000000020D /* DownloadQueueView.swift in Sources */,
+				A1000000000000000000020E /* SettingsView.swift in Sources */,
+				A10000000000000000000210 /* EmptyStateView.swift in Sources */,
+			A10000000000000000000212 /* CSVLibraryParser.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A1000000000000000000000F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A10000000000000000000010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A10000000000000000000011 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.PlayDex;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A10000000000000000000012 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.PlayDex;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A1000000000000000000000D /* Build configuration list for PBXProject "PlayDex" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000000000000000000000F /* Debug */,
+				A10000000000000000000010 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1000000000000000000000E /* Build configuration list for PBXNativeTarget "PlayDex" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000011 /* Debug */,
+				A10000000000000000000012 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A10000000000000000000000 /* Project object */;
+}

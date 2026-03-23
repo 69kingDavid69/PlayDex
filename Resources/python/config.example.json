@@ -1,0 +1,13 @@
+{
+  "downloadLocation": "~/Music/Deemix",
+  "quality": {
+    "preferred": "FLAC",
+    "fallback_chain": [
+      "FLAC",
+      "MP3_320"
+    ],
+    "reject_below": "MP3_320"
+  },
+  "parallelDownloads": 3,
+  "retryCount": 2
+}
