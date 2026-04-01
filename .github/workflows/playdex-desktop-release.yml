@@ -1,0 +1,79 @@
+name: PlayDex Desktop Release
+
+on:
+  push:
+    tags:
+      - "playdex-desktop-v*"
+
+jobs:
+  publish-tauri:
+    name: Release (${{ matrix.platform }})
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            args: ""
+          - platform: windows-latest
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: playdex-desktop/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./playdex-desktop/src-tauri -> target"
+
+      - name: Install frontend dependencies
+        working-directory: playdex-desktop
+        run: npm ci
+
+      - name: Rebuild bundled Python vendor for target platform
+        working-directory: playdex-desktop
+        run: |
+          python -c "import shutil; shutil.rmtree('src-tauri/resources/engine/vendor', ignore_errors=True)"
+          python -m pip install --upgrade pip
+          python -m pip install -r src-tauri/resources/engine/requirements.txt -t src-tauri/resources/engine/vendor
+
+      - name: Validate project before release
+        working-directory: playdex-desktop
+        run: npm run check
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: playdex-desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: "PlayDex Desktop ${{ github.ref_name }}"
+          releaseBody: "Build automática de PlayDex Desktop para Windows y Linux. Descarga desde los assets el instalador o paquete que corresponda a tu sistema."
+          releaseDraft: true
+          prerelease: false
+          generateReleaseNotes: true
+          args: ${{ matrix.args }}

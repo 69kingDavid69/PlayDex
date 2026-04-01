@@ -1,0 +1,37 @@
+{
+  "$schema": "https://schema.tauri.app/config/2.0.0",
+  "productName": "PlayDex",
+  "version": "0.1.0",
+  "identifier": "com.playdex.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420"
+  },
+  "app": {
+    "macOSPrivateApi": false,
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "category": "Music",
+    "copyright": "",
+    "icon": [
+      "icons/icon.png"
+    ],
+    "resources": ["resources/engine/**/*"]
+  },
+  "plugins": {
+    "dialog": {
+      "defaultPath": "~"
+    },
+    "notification": {
+      "defaultIcon": "icons/icon.png"
+    }
+  }
+}

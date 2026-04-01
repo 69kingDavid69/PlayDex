@@ -1,60 +1,79 @@
 # PlayDex
 
-App macOS nativa para importar playlists desde **XML de Music/iTunes** o **CSV de Spotify** y descargarlas en alta calidad a través de Deezer usando deemix.
+PlayDex reúne dos aplicaciones de escritorio para importar playlists desde bibliotecas existentes y descargarlas en alta calidad con Deezer + deemix:
 
-## Características
+- `macOS`: app nativa escrita en SwiftUI.
+- `Windows / Linux`: extensión multiplataforma en `playdex-desktop/`, construida con Tauri v2 + React + Rust.
 
-- Importa playlists desde **XML** exportado de Music/iTunes
-- Importa playlists desde **CSV** de Spotify (y otras apps compatibles)
-- Descarga canciones en FLAC o MP3 320 vía Deezer + deemix
-- Cola de descarga con progreso en tiempo real, pausa y cancelación
-- Token ARL persistido de forma segura en el **Keychain de macOS**
-- Icono en la barra de menú con estado de descarga
-- Carpeta de destino con el nombre de la playlist
+## Características del proyecto
 
-## Distribución
+- Importación de playlists desde XML exportado de Music/iTunes.
+- Importación de playlists desde CSV de Spotify y formatos compatibles.
+- Descarga de canciones en FLAC o MP3 320.
+- Cola con progreso en tiempo real y control de pausa, reanudación y cancelación.
+- Reutilización del engine Python de PlayDex dentro de empaquetados de escritorio.
+- Persistencia segura del token ARL según la plataforma.
 
-La app se distribuye como `.app` / `.dmg` **fuera de la Mac App Store**.  
-No está disponible en el App Store por depender de credenciales de sesión de Deezer (ARL).
+## Estado por plataforma
 
-> **Nota:** Necesitas un token ARL de Deezer activo. Configúralo en Ajustes al abrir la app por primera vez.
+| Plataforma | Estado | Ubicación | Notas |
+|---|---|---|---|
+| macOS | estable | `App/`, `Services/`, `Views/` | App original nativa con SwiftUI |
+| Windows / Linux | MVP funcional | `playdex-desktop/` | UI React, backend Rust, empaquetado por GitHub Actions |
 
-## Requisitos
+## Estructura del repositorio
 
-- macOS 13 Ventura o superior
-- Xcode 16+ (para compilar desde código fuente)
-- Python 3 (incluido dentro del bundle de la app)
+```
+PlayDex/
+├── App/                  # App macOS (Swift / SwiftUI)
+├── Models/
+├── Services/
+├── Views/
+├── Resources/python/     # Engine Python compartido del proyecto original
+├── PlayDex.xcodeproj
+└── playdex-desktop/      # Extensión Windows/Linux con Tauri + React + Rust
+```
 
-## Instalación desde código fuente
+## Desarrollo rápido
+
+### App macOS
 
 ```bash
-git clone https://github.com/tu-usuario/PlayDex.git
-cd PlayDex
 open PlayDex.xcodeproj
 ```
 
-Pulsa `⌘R` en Xcode para compilar y ejecutar.
+Pulsa `Cmd + R` en Xcode para compilar y ejecutar la app macOS.
 
-## Estructura del proyecto
+### PlayDex Desktop (Windows / Linux)
 
-```
-App/          → Entry point, AppDelegate
-Models/       → Playlist, Track, DownloadJob
-Services/     → DownloadManager, ITunesLibraryParser, CSVLibraryParser,
-                PythonBridge, SettingsStore, KeychainStore
-Views/        → ContentView, PlaylistSidebarView, TrackListView,
-                DownloadQueueView, SettingsView
-Resources/    → Python backend (deemix_engine.py + dependencias)
+```bash
+cd playdex-desktop
+npm ci
+npm run check
+npm run tauri:dev
 ```
 
-## Formatos de CSV soportados
+`npm run check` compila el frontend y ejecuta las pruebas de Rust del backend Tauri.
 
-El parser detecta automáticamente las columnas. Compatible con exportaciones de:
-- Spotify (exportado con [Exportify](https://exportify.net) u otras herramientas)
-- Cualquier CSV con columnas identificables de título y artista
+## Releases de Windows y Linux
 
-Columnas reconocidas: `Track Name`, `Title`, `Song`, `Artist Name(s)`, `Artist`, `Album`, `ISRC`, `Duration (ms)`.
+El subproyecto `playdex-desktop/` queda preparado para publicar binarios desde GitHub Actions. El flujo de release se activa al empujar una etiqueta con este formato:
+
+```bash
+git tag playdex-desktop-v0.1.0
+git push origin playdex-desktop-v0.1.0
+```
+
+La acción de GitHub genera un draft release con los assets de Windows y Linux soportados por Tauri para esos runners.
+Antes de empaquetar, el workflow regenera las dependencias Python del engine en cada runner para evitar publicar binarios nativos de macOS dentro de los builds de Windows/Linux.
+
+## Documentación adicional
+
+- [`playdex-desktop/README.md`](playdex-desktop/README.md)
+- [`playdex-desktop/SETUP.md`](playdex-desktop/SETUP.md)
+- [`playdex-desktop/ArquitecturaWinLin.md`](playdex-desktop/ArquitecturaWinLin.md)
+- [`playdex-desktop/SkillsMcpWinLin.md`](playdex-desktop/SkillsMcpWinLin.md)
 
 ## Licencia
 
-Distribuido bajo la licencia MIT. Consulta el archivo `LICENSE` para más detalles.
+Distribuido bajo la licencia MIT. Consulta `LICENSE` para más detalles.

@@ -1,0 +1,62 @@
+name: PlayDex Desktop CI
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/playdex-desktop-ci.yml"
+      - ".github/workflows/playdex-desktop-release.yml"
+      - "playdex-desktop/**"
+      - "README.md"
+      - ".gitignore"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/playdex-desktop-ci.yml"
+      - ".github/workflows/playdex-desktop-release.yml"
+      - "playdex-desktop/**"
+      - "README.md"
+      - ".gitignore"
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - ubuntu-22.04
+          - windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: playdex-desktop/package-lock.json
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./playdex-desktop/src-tauri -> target"
+
+      - name: Install frontend dependencies
+        working-directory: playdex-desktop
+        run: npm ci
+
+      - name: Run project checks
+        working-directory: playdex-desktop
+        run: npm run check
