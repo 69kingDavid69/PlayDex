@@ -73,7 +73,7 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "PlayDex Desktop ${{ github.ref_name }}"
           releaseBody: "Build automática de PlayDex Desktop para Windows y Linux. Descarga desde los assets el instalador o paquete que corresponda a tu sistema."
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           generateReleaseNotes: true
           args: ${{ matrix.args }}

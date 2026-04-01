@@ -1,6 +1,6 @@
 [package]
 name = "playdex-desktop"
-version = "0.1.0"
+version = "0.1.1"
 description = "PlayDex desktop app for Windows and Linux"
 edition = "2021"
 license = "MIT"
@@ -35,4 +35,3 @@ uuid = { version = "1", features = ["v4", "serde"] }
 [features]
 default = []
 custom-protocol = ["tauri/custom-protocol"]
-

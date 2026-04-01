@@ -60,11 +60,11 @@ npm run tauri:dev
 El subproyecto `playdex-desktop/` queda preparado para publicar binarios desde GitHub Actions. El flujo de release se activa al empujar una etiqueta con este formato:
 
 ```bash
-git tag playdex-desktop-v0.1.0
-git push origin playdex-desktop-v0.1.0
+git tag playdex-desktop-v0.1.1
+git push origin playdex-desktop-v0.1.1
 ```
 
-La acción de GitHub genera un draft release con los assets de Windows y Linux soportados por Tauri para esos runners.
+La acción de GitHub publica la release con los assets de Windows y Linux soportados por Tauri para esos runners.
 Antes de empaquetar, el workflow regenera las dependencias Python del engine en cada runner para evitar publicar binarios nativos de macOS dentro de los builds de Windows/Linux.
 
 ## Documentación adicional

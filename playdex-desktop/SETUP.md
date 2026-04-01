@@ -93,11 +93,11 @@ El workflow de release queda configurado en:
 Para generar assets de Windows y Linux:
 
 ```bash
-git tag playdex-desktop-v0.1.0
-git push origin playdex-desktop-v0.1.0
+git tag playdex-desktop-v0.1.1
+git push origin playdex-desktop-v0.1.1
 ```
 
-Ese push dispara el build en runners nativos de GitHub y crea un draft release con los binarios soportados por Tauri para Windows y Linux.
+Ese push dispara el build en runners nativos de GitHub y publica la release con los binarios soportados por Tauri para Windows y Linux.
 El workflow vuelve a instalar el vendor Python del engine en cada runner para evitar arrastrar binarios compilados desde macOS.
 
 ## 7. CI para pull requests
