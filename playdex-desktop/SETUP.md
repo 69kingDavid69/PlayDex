@@ -22,7 +22,7 @@ cargo --version
 
 ### Python 3
 
-El engine se ejecuta con `python3`. Las dependencias de Python van vendorizadas en `src-tauri/resources/engine/vendor/`, así que no hace falta un `pip install` global para el flujo normal.
+En desarrollo local, el engine intenta usar `python3` en macOS/Linux y `py -3` o `python` en Windows. Las dependencias de Python van vendorizadas en `src-tauri/resources/engine/vendor/`, así que no hace falta un `pip install` global para el flujo normal.
 
 ```bash
 python3 --version
@@ -93,12 +93,13 @@ El workflow de release queda configurado en:
 Para generar assets de Windows y Linux:
 
 ```bash
-git tag playdex-desktop-v0.1.1
-git push origin playdex-desktop-v0.1.1
+git tag playdex-desktop-v0.1.2
+git push origin playdex-desktop-v0.1.2
 ```
 
 Ese push dispara el build en runners nativos de GitHub y publica la release con los binarios soportados por Tauri para Windows y Linux.
 El workflow vuelve a instalar el vendor Python del engine en cada runner para evitar arrastrar binarios compilados desde macOS.
+En Windows, además descarga el runtime embebido oficial de Python y lo empaqueta dentro de la app para que el instalador funcione sin requerir Python preinstalado.
 
 ## 7. CI para pull requests
 
@@ -124,7 +125,7 @@ npx skills add 69kingDavid69/skillguard
 
 ### Error "python3 not found"
 
-Asegúrate de que `python3` esté disponible en `PATH`.
+Eso solo aplica al desarrollo local. Las releases de Windows ya llevan un runtime de Python embebido; en macOS/Linux de desarrollo, asegúrate de que `python3` esté disponible en `PATH`.
 
 ### Error al empaquetar en Linux
 

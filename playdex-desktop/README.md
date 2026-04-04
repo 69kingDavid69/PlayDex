@@ -58,12 +58,13 @@ Valida el subproyecto en Ubuntu y Windows.
 Para publicar binarios:
 
 ```bash
-git tag playdex-desktop-v0.1.1
-git push origin playdex-desktop-v0.1.1
+git tag playdex-desktop-v0.1.2
+git push origin playdex-desktop-v0.1.2
 ```
 
 El workflow publica la release con los assets generados por Tauri en runners Windows y Linux.
 Durante ese proceso también reconstruye el vendor Python del engine en cada runner para que los paquetes nativos coincidan con la plataforma destino.
+En Windows, además descarga y empaqueta un runtime embebido de Python para que el instalador no dependa de una instalación previa del usuario.
 
 ## Documentación relacionada
 

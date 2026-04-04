@@ -1,17 +1,18 @@
-use std::process::{Command, Stdio};
+use std::ffi::OsString;
 use std::io::{BufRead, BufReader, Write};
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::path::PathBuf;
 
-use tauri::{AppHandle, Emitter};
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use anyhow::Result;
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter};
+use thiserror::Error;
 
-use crate::types::Playlist;
-use crate::settings;
 use crate::keyring;
+use crate::settings;
+use crate::types::Playlist;
 
 #[derive(Error, Debug)]
 pub enum EngineError {
@@ -93,6 +94,14 @@ pub struct EngineProcess {
     inner: Arc<Mutex<EngineProcessInner>>,
 }
 
+#[derive(Debug, Clone)]
+struct PythonCandidate {
+    label: &'static str,
+    program: OsString,
+    args: Vec<OsString>,
+    home: Option<PathBuf>,
+}
+
 impl EngineProcess {
     pub fn new(app: AppHandle) -> Self {
         Self {
@@ -107,20 +116,20 @@ impl EngineProcess {
 
     pub fn start(&self) -> Result<(), EngineError> {
         let mut inner = self.inner.lock().unwrap();
-        
+
         if inner.process.is_some() {
             return Ok(());
         }
 
         // Buscar el script Python
         let script_path = Self::find_script_path()?;
-        
+
         // Configurar variables de entorno
         let settings = tokio::runtime::Runtime::new()
             .unwrap()
             .block_on(settings::get_settings())
             .map_err(|e| EngineError::ProcessLaunchFailed(e.to_string()))?;
-        
+
         let arl = tokio::runtime::Runtime::new()
             .unwrap()
             .block_on(keyring::get_arl())
@@ -151,34 +160,19 @@ impl EngineProcess {
             "retryCount": settings.retry_count,
         });
 
-        std::fs::write(&config_path, serde_json::to_string_pretty(&engine_config).unwrap())
-            .map_err(|e| EngineError::ProcessLaunchFailed(e.to_string()))?;
+        std::fs::write(
+            &config_path,
+            serde_json::to_string_pretty(&engine_config).unwrap(),
+        )
+        .map_err(|e| EngineError::ProcessLaunchFailed(e.to_string()))?;
 
-        // Lanzar proceso Python
-        let mut command = Command::new("python3");
-        command.arg(&script_path);
-        command.env("PYTHONUNBUFFERED", "1");
-        command.env("DEEMIX_ITUNES_CONFIG_PATH", config_path);
-        command.env("DEEMIX_ITUNES_ARL", arl);
-        
-        // Añadir vendor al PYTHONPATH
-        if let Some(vendor_path) = Self::find_vendor_path() {
-            command.env("PYTHONPATH", vendor_path);
-        }
+        let mut child = Self::spawn_python_process(&script_path, &config_path, &arl)?;
 
-        command.stdin(Stdio::piped());
-        command.stdout(Stdio::piped());
-        command.stderr(Stdio::inherit());
-
-        let mut child = command.spawn()
-            .map_err(|e| EngineError::ProcessLaunchFailed(e.to_string()))?;
-
-        let stdin = child.stdin.take()
-            .ok_or(EngineError::StdinUnavailable)?;
+        let stdin = child.stdin.take().ok_or(EngineError::StdinUnavailable)?;
 
         let app = inner.app.clone();
         let stdout = child.stdout.take().unwrap();
-        
+
         // Hilo para leer stdout
         let stdout_thread = thread::spawn(move || {
             let reader = BufReader::new(stdout);
@@ -214,27 +208,30 @@ impl EngineProcess {
 
     pub fn stop(&self) {
         let mut inner = self.inner.lock().unwrap();
-        
+
         if let Some(mut process) = inner.process.take() {
             let _ = process.kill();
             let _ = process.wait();
         }
-        
+
         inner.stdin = None;
         inner.stdout_thread = None;
     }
 
     pub fn send_command(&self, command: serde_json::Value) -> Result<(), EngineError> {
         let mut inner = self.inner.lock().unwrap();
-        
+
         if let Some(ref mut stdin) = inner.stdin {
             let json = serde_json::to_string(&command)
                 .map_err(|e| EngineError::JsonError(e.to_string()))?;
-            stdin.write_all(json.as_bytes())
+            stdin
+                .write_all(json.as_bytes())
                 .map_err(|e| EngineError::IoError(e.to_string()))?;
-            stdin.write_all(b"\n")
+            stdin
+                .write_all(b"\n")
                 .map_err(|e| EngineError::IoError(e.to_string()))?;
-            stdin.flush()
+            stdin
+                .flush()
                 .map_err(|e| EngineError::IoError(e.to_string()))?;
             Ok(())
         } else {
@@ -268,13 +265,144 @@ impl EngineProcess {
         Err(EngineError::ScriptNotFound)
     }
 
-    fn find_vendor_path() -> Option<String> {
+    fn spawn_python_process(
+        script_path: &Path,
+        config_path: &Path,
+        arl: &str,
+    ) -> Result<std::process::Child, EngineError> {
+        let vendor_path = Self::find_vendor_path();
+        let python_path = vendor_path
+            .as_deref()
+            .map(Self::build_python_path)
+            .transpose()?;
+        let mut launch_errors = Vec::new();
+
+        for candidate in Self::python_candidates(script_path) {
+            let mut command = Command::new(&candidate.program);
+
+            for arg in &candidate.args {
+                command.arg(arg);
+            }
+
+            command.arg(script_path);
+            command.env("PYTHONUNBUFFERED", "1");
+            command.env("PYTHONDONTWRITEBYTECODE", "1");
+            command.env("DEEMIX_ITUNES_CONFIG_PATH", config_path);
+            command.env("DEEMIX_ITUNES_ARL", arl);
+
+            if let Some(home) = &candidate.home {
+                command.env("PYTHONHOME", home);
+            }
+
+            if let Some(python_path) = &python_path {
+                command.env("PYTHONPATH", python_path);
+            }
+
+            command.stdin(Stdio::piped());
+            command.stdout(Stdio::piped());
+            command.stderr(Stdio::inherit());
+
+            match command.spawn() {
+                Ok(child) => return Ok(child),
+                Err(error) => {
+                    launch_errors.push(format!("{}: {}", candidate.label, error));
+                }
+            }
+        }
+
+        Err(EngineError::ProcessLaunchFailed(format!(
+            "No Python runtime available for PlayDex ({})",
+            launch_errors.join(" | ")
+        )))
+    }
+
+    fn python_candidates(script_path: &Path) -> Vec<PythonCandidate> {
+        let mut candidates = Vec::new();
+
+        #[cfg(not(target_os = "windows"))]
+        let _ = script_path;
+
+        #[cfg(target_os = "windows")]
+        if let Some(bundled_python) = Self::find_bundled_python(script_path) {
+            candidates.push(PythonCandidate {
+                label: "bundled python",
+                home: bundled_python.parent().map(Path::to_path_buf),
+                program: bundled_python.into_os_string(),
+                args: Vec::new(),
+            });
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            candidates.push(PythonCandidate {
+                label: "py -3",
+                program: OsString::from("py"),
+                args: vec![OsString::from("-3")],
+                home: None,
+            });
+            candidates.push(PythonCandidate {
+                label: "python",
+                program: OsString::from("python"),
+                args: Vec::new(),
+                home: None,
+            });
+            candidates.push(PythonCandidate {
+                label: "python3",
+                program: OsString::from("python3"),
+                args: Vec::new(),
+                home: None,
+            });
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            candidates.push(PythonCandidate {
+                label: "python3",
+                program: OsString::from("python3"),
+                args: Vec::new(),
+                home: None,
+            });
+            candidates.push(PythonCandidate {
+                label: "python",
+                program: OsString::from("python"),
+                args: Vec::new(),
+                home: None,
+            });
+        }
+
+        candidates
+    }
+
+    #[cfg(target_os = "windows")]
+    fn find_bundled_python(script_path: &Path) -> Option<PathBuf> {
+        let engine_dir = script_path.parent()?;
+        [
+            engine_dir.join("python/windows/python.exe"),
+            engine_dir.join("python/python.exe"),
+        ]
+        .into_iter()
+        .find(|path| path.exists())
+    }
+
+    fn build_python_path(vendor_path: &Path) -> Result<OsString, EngineError> {
+        let mut paths = vec![vendor_path.to_path_buf()];
+
+        if let Some(existing_python_path) = std::env::var_os("PYTHONPATH") {
+            paths.extend(std::env::split_paths(&existing_python_path));
+        }
+
+        std::env::join_paths(paths).map_err(|error| {
+            EngineError::ProcessLaunchFailed(format!("Invalid PYTHONPATH: {error}"))
+        })
+    }
+
+    fn find_vendor_path() -> Option<PathBuf> {
         // Buscar en recursos empaquetados
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(exe_dir) = exe_path.parent() {
                 let vendor_path = exe_dir.join("resources/engine/vendor");
                 if vendor_path.exists() {
-                    return Some(vendor_path.to_string_lossy().into_owned());
+                    return Some(vendor_path);
                 }
             }
         }
@@ -282,13 +410,13 @@ impl EngineProcess {
         // Buscar en desarrollo
         let dev_path = PathBuf::from("src-tauri/resources/engine/vendor");
         if dev_path.exists() {
-            return Some(dev_path.to_string_lossy().into_owned());
+            return Some(dev_path);
         }
 
         // Buscar en el proyecto raíz
         let root_path = PathBuf::from("../Resources/python/vendor");
         if root_path.exists() {
-            return Some(root_path.to_string_lossy().into_owned());
+            return Some(root_path);
         }
 
         None
@@ -299,7 +427,7 @@ impl EngineProcess {
 pub async fn start_engine(app: AppHandle) -> Result<(), EngineError> {
     let engine = EngineProcess::new(app);
     engine.start()?;
-    
+
     // Guardar la referencia al engine en el estado de la aplicación
     // (esto requeriría un estado compartido, se implementará más tarde)
     Ok(())
@@ -324,7 +452,9 @@ pub async fn download_playlist(playlist: Playlist) -> Result<(), EngineError> {
 
     // TODO: Obtener el engine del estado de la aplicación y enviar el comando
     // Por ahora, solo retornamos un error indicando que no está implementado
-    Err(EngineError::ProcessLaunchFailed("Engine not available in state".to_string()))
+    Err(EngineError::ProcessLaunchFailed(
+        "Engine not available in state".to_string(),
+    ))
 }
 
 pub async fn pause_download() -> Result<(), EngineError> {
@@ -333,7 +463,9 @@ pub async fn pause_download() -> Result<(), EngineError> {
     });
 
     // TODO: Enviar comando
-    Err(EngineError::ProcessLaunchFailed("Engine not available in state".to_string()))
+    Err(EngineError::ProcessLaunchFailed(
+        "Engine not available in state".to_string(),
+    ))
 }
 
 pub async fn resume_download() -> Result<(), EngineError> {
@@ -342,7 +474,9 @@ pub async fn resume_download() -> Result<(), EngineError> {
     });
 
     // TODO: Enviar comando
-    Err(EngineError::ProcessLaunchFailed("Engine not available in state".to_string()))
+    Err(EngineError::ProcessLaunchFailed(
+        "Engine not available in state".to_string(),
+    ))
 }
 
 pub async fn cancel_download() -> Result<(), EngineError> {
@@ -351,5 +485,7 @@ pub async fn cancel_download() -> Result<(), EngineError> {
     });
 
     // TODO: Enviar comando
-    Err(EngineError::ProcessLaunchFailed("Engine not available in state".to_string()))
+    Err(EngineError::ProcessLaunchFailed(
+        "Engine not available in state".to_string(),
+    ))
 }

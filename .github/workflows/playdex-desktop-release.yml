@@ -61,6 +61,31 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r src-tauri/resources/engine/requirements.txt -t src-tauri/resources/engine/vendor
 
+      - name: Bundle embedded Python runtime for Windows
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        working-directory: playdex-desktop
+        run: |
+          $pythonVersion = python -c "import sys; print('.'.join(map(str, sys.version_info[:3])))"
+          $runtimeDir = "src-tauri/resources/engine/python/windows"
+          $archivePath = Join-Path $env:RUNNER_TEMP "python-embed.zip"
+          $embedUrl = "https://www.python.org/ftp/python/$pythonVersion/python-$pythonVersion-embed-amd64.zip"
+
+          if (Test-Path $runtimeDir) {
+            Remove-Item $runtimeDir -Recurse -Force
+          }
+
+          New-Item -ItemType Directory -Force -Path $runtimeDir | Out-Null
+          Invoke-WebRequest -Uri $embedUrl -OutFile $archivePath
+          Expand-Archive -Path $archivePath -DestinationPath $runtimeDir -Force
+          Get-ChildItem -Path $runtimeDir -Filter "python*._pth" | Remove-Item -Force
+
+          if (-not (Test-Path (Join-Path $runtimeDir "python.exe"))) {
+            throw "python.exe no apareció en el runtime embebido descargado."
+          }
+
+          & (Join-Path $runtimeDir "python.exe") -V
+
       - name: Validate project before release
         working-directory: playdex-desktop
         run: npm run check

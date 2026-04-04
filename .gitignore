@@ -14,3 +14,4 @@ playdex-desktop/*.tsbuildinfo
 playdex-desktop/vite.config.d.ts
 playdex-desktop/src-tauri/resources/engine/vendor/**/__pycache__/
 playdex-desktop/src-tauri/resources/engine/vendor/**/*.pyc
+playdex-desktop/src-tauri/resources/engine/python/
