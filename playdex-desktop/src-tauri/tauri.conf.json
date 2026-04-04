@@ -14,7 +14,18 @@
     "withGlobalTauri": true,
     "windows": [],
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "main-capability",
+          "description": "Permite a la ventana principal usar IPC base y abrir selectores de archivos.",
+          "windows": ["main"],
+          "permissions": [
+            "core:default",
+            "dialog:allow-open"
+          ]
+        }
+      ]
     }
   },
   "bundle": {
@@ -30,12 +41,5 @@
     ],
     "resources": ["resources/engine/**/*"]
   },
-  "plugins": {
-    "dialog": {
-      "defaultPath": "~"
-    },
-    "notification": {
-      "defaultIcon": "icons/icon.png"
-    }
-  }
+  "plugins": {}
 }
