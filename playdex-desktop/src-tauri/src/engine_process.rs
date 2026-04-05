@@ -117,8 +117,19 @@ impl EngineProcess {
     pub fn start(&self) -> Result<(), EngineError> {
         let mut inner = self.inner.lock().unwrap();
 
-        if inner.process.is_some() {
-            return Ok(());
+        if let Some(mut process) = inner.process.take() {
+            match process.try_wait() {
+                Ok(Some(_)) | Err(_) => {
+                    // El proceso murió o dio error, podemos iniciar uno nuevo
+                    inner.stdin = None;
+                    inner.stdout_thread = None;
+                }
+                Ok(None) => {
+                    // El proceso sigue corriendo
+                    inner.process = Some(process);
+                    return Ok(());
+                }
+            }
         }
 
         // Buscar el script Python

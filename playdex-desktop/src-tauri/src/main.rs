@@ -30,6 +30,7 @@ fn main() {
         .manage(app_state)
         .invoke_handler(tauri::generate_handler![
             start_engine,
+            restart_engine,
             download_playlist,
             pause_download,
             resume_download,
@@ -59,6 +60,21 @@ async fn start_engine(
     *engine_guard = Some(engine);
 
     Ok(())
+}
+
+#[tauri::command]
+async fn restart_engine(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    {
+        let mut engine_guard = state.engine.lock().map_err(|e| e.to_string())?;
+        if let Some(engine) = engine_guard.take() {
+            engine.stop();
+        }
+    }
+    
+    start_engine(app, state).await
 }
 
 #[tauri::command]

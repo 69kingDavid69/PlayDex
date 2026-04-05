@@ -45,10 +45,11 @@ interface DownloadStore {
   clearImportedCSV: () => void
   selectPlaylist: (id: string | null) => void
   queueSelectedPlaylist: () => void
-  pauseAll: () => void
-  resumeAll: () => void
-  cancelAll: () => void
+  pauseAll: () => Promise<void>
+  resumeAll: () => Promise<void>
+  cancelAll: () => Promise<void>
   handleEngineEvent: (event: EngineEvent) => void
+  restartEngine: () => Promise<void>
 
   // Settings actions
   openSettings: () => void
@@ -157,6 +158,17 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
 
       try {
         await invoke('start_engine')
+        
+        // Timeout para el handshake de bridge_ready
+        setTimeout(() => {
+          if (!get().engineStarted) {
+            set({
+              bridgeStatusText: 'Error: Engine no respondió (timeout)',
+              lastErrorMessage: 'El proceso inició pero no emitió bridge_ready a tiempo.'
+            })
+          }
+        }, 5000)
+        
       } catch (error) {
         set({ 
           lastErrorMessage: String(error) || 'Error desconocido al invocar engine', 
@@ -168,6 +180,23 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
         lastErrorMessage: (error && error.message) ? error.message : String(error), 
         bridgeStatusText: 'Error general en inicio' 
       })
+    }
+  },
+
+  restartEngine: async () => {
+    set({ bridgeStatusText: 'Reiniciando engine...', engineStarted: false, downloadReady: false })
+    try {
+      await invoke('restart_engine')
+      setTimeout(() => {
+        if (!get().engineStarted) {
+          set({
+            bridgeStatusText: 'Error: Engine no respondió al reiniciar',
+            lastErrorMessage: 'Timeout esperando bridge_ready post-reinicio.'
+          })
+        }
+      }, 5000)
+    } catch (error) {
+      set({ lastErrorMessage: String(error), bridgeStatusText: 'Error al reiniciar engine' })
     }
   },
 
@@ -218,7 +247,8 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
     const selectedPlaylist = state.playlists.find(p => p.id === state.selectedPlaylistId) || state.playlists[0]
     if (!selectedPlaylist) return
     
-    const jobs: DownloadJob[] = selectedPlaylist.tracks.map(track => ({
+    // Generar nuevos jobs
+    const newJobs: DownloadJob[] = selectedPlaylist.tracks.map(track => ({
       id: crypto.randomUUID(),
       playlistName: selectedPlaylist.name,
       track: { ...track },
@@ -233,27 +263,44 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
       existingPlaylist: undefined
     }))
     
-    set({ jobs })
+    // Append a la cola existente
+    set({ jobs: [...state.jobs, ...newJobs] })
     
     invoke('download_playlist', { playlist: selectedPlaylist })
       .catch(error => {
-        set({ lastErrorMessage: String(error) })
+        // En caso de fallo, marcar solo los nuevos jobs como error
+        set(s => ({
+          lastErrorMessage: String(error),
+          jobs: s.jobs.map(j => newJobs.some(nj => nj.id === j.id) ? { ...j, status: 'error', message: String(error) } : j)
+        }))
       })
   },
 
-  pauseAll: () => {
-    invoke('pause_download').catch(console.error)
-    set({ isPaused: true })
+  pauseAll: async () => {
+    try {
+      await invoke('pause_download')
+      set({ isPaused: true })
+    } catch (error) {
+      set({ lastErrorMessage: String(error) })
+    }
   },
 
-  resumeAll: () => {
-    invoke('resume_download').catch(console.error)
-    set({ isPaused: false })
+  resumeAll: async () => {
+    try {
+      await invoke('resume_download')
+      set({ isPaused: false })
+    } catch (error) {
+      set({ lastErrorMessage: String(error) })
+    }
   },
 
-  cancelAll: () => {
-    invoke('cancel_download').catch(console.error)
-    set({ jobs: [] })
+  cancelAll: async () => {
+    try {
+      await invoke('cancel_download')
+      set({ jobs: [] })
+    } catch (error) {
+      set({ lastErrorMessage: String(error) })
+    }
   },
 
   // Settings actions
@@ -306,6 +353,9 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
     }
     
     set({ settingsOpen: false })
+    
+    // Restart engine automatically to apply new settings/ARL
+    get().restartEngine()
   },
 
   handleEngineEvent: (event: EngineEvent) => {
@@ -323,70 +373,86 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
         break
         
       case 'progress':
-        set(state => ({
-          jobs: state.jobs.map(job => {
-            if (job.track.artist === event.track.artist && job.track.title === event.track.title) {
-              return {
-                ...job,
-                status: 'downloading' as DownloadState,
-                progressPercent: event.percent,
-                speedKbps: event.speed_kbps,
-                etaSeconds: event.eta_seconds
+        set(state => {
+          let updated = false;
+          return {
+            jobs: state.jobs.map(job => {
+              if (!updated && job.track.artist === event.track.artist && job.track.title === event.track.title && (job.status === 'pending' || job.status === 'downloading')) {
+                updated = true;
+                return {
+                  ...job,
+                  status: 'downloading' as DownloadState,
+                  progressPercent: event.percent,
+                  speedKbps: event.speed_kbps,
+                  etaSeconds: event.eta_seconds
+                }
               }
-            }
-            return job
-          })
-        }))
+              return job
+            })
+          }
+        })
         break
         
       case 'completed':
-        set(state => ({
-          jobs: state.jobs.map(job => {
-            if (job.track.artist === event.track.artist && job.track.title === event.track.title) {
-              return {
-                ...job,
-                status: 'completed' as DownloadState,
-                progressPercent: 100,
-                audioFormat: event.audio_format === 'FLAC' ? 'FLAC' : 'MP3_320',
-                filePath: event.file_path,
-                fileSizeMB: event.file_size_mb
+        set(state => {
+          let updated = false;
+          return {
+            jobs: state.jobs.map(job => {
+              if (!updated && job.track.artist === event.track.artist && job.track.title === event.track.title && (job.status === 'pending' || job.status === 'downloading')) {
+                updated = true;
+                return {
+                  ...job,
+                  status: 'completed' as DownloadState,
+                  progressPercent: 100,
+                  audioFormat: event.audio_format === 'FLAC' ? 'FLAC' : 'MP3_320',
+                  filePath: event.file_path,
+                  fileSizeMB: event.file_size_mb
+                }
               }
-            }
-            return job
-          })
-        }))
+              return job
+            })
+          }
+        })
         break
         
       case 'skipped':
-        set(state => ({
-          jobs: state.jobs.map(job => {
-            if (job.track.artist === event.track.artist && job.track.title === event.track.title) {
-              return {
-                ...job,
-                status: 'skipped' as DownloadState,
-                message: `Ya existe en: ${event.existing_playlist}`,
-                existingPlaylist: event.existing_playlist
+        set(state => {
+          let updated = false;
+          return {
+            jobs: state.jobs.map(job => {
+              if (!updated && job.track.artist === event.track.artist && job.track.title === event.track.title && (job.status === 'pending' || job.status === 'downloading')) {
+                updated = true;
+                return {
+                  ...job,
+                  status: 'skipped' as DownloadState,
+                  message: `Ya existe en: ${event.existing_playlist}`,
+                  existingPlaylist: event.existing_playlist
+                }
               }
-            }
-            return job
-          })
-        }))
+              return job
+            })
+          }
+        })
         break
         
       case 'error':
-        set(state => ({
-          jobs: state.jobs.map(job => {
-            if (event.track && job.track.artist === event.track.artist && job.track.title === event.track.title) {
-              return {
-                ...job,
-                status: 'error' as DownloadState,
-                message: event.message
+        set(state => {
+          let updated = false;
+          return {
+            jobs: state.jobs.map(job => {
+              if (!updated && event.track && job.track.artist === event.track.artist && job.track.title === event.track.title && (job.status === 'pending' || job.status === 'downloading')) {
+                updated = true;
+                return {
+                  ...job,
+                  status: 'error' as DownloadState,
+                  message: event.message
+                }
               }
-            }
-            return job
-          }),
-          lastErrorMessage: event.message
-        }))
+              return job
+            }),
+            lastErrorMessage: event.message
+          }
+        })
         break
         
       case 'playlist_done':

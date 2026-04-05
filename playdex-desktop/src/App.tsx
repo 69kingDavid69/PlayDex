@@ -7,7 +7,7 @@ import EmptyState from './components/EmptyState'
 import useDownloadStore from './store/downloadStore'
 
 function App() {
-  const { bootstrapIfNeeded, playlists, bridgeStatusText, lastErrorMessage } = useDownloadStore()
+  const { bootstrapIfNeeded, playlists, bridgeStatusText, lastErrorMessage, engineStarted, restartEngine } = useDownloadStore()
 
   useEffect(() => {
     bootstrapIfNeeded()
@@ -32,6 +32,18 @@ function App() {
         </div>
         
         <div className="flex items-center gap-3" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          {!engineStarted && (
+            <button 
+              onClick={restartEngine}
+              className="text-xs bg-surface-700 hover:bg-surface-600 px-2.5 py-1 rounded-md text-surface-200 hover:text-white transition-colors border border-surface-600 shadow-sm"
+              title="Reintentar inicialización"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline-block mr-1.5 -mt-0.5">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-8.4l5.67 1.33" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Reiniciar Engine
+            </button>
+          )}
           <StatusPill text={bridgeStatusText} />
           <SettingsButton />
         </div>
