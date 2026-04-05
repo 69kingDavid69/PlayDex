@@ -1,5 +1,5 @@
-use keyring::{Entry, Error as KeyringError};
 use anyhow::Result;
+use keyring::{Entry, Error as KeyringError};
 
 const SERVICE: &str = "playdex";
 const USERNAME: &str = "deezer-arl";

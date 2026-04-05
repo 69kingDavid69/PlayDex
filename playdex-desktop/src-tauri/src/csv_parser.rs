@@ -1,8 +1,8 @@
-use crate::types::{Playlist, Track, PlaylistSource};
-use anyhow::{Result, bail};
+use crate::types::{Playlist, PlaylistSource, Track};
+use anyhow::{bail, Result};
 use std::path::Path;
-use uuid::Uuid;
 use tokio::fs;
+use uuid::Uuid;
 
 #[derive(thiserror::Error, Debug)]
 pub enum CsvParseError {
@@ -28,7 +28,8 @@ pub async fn load_playlist_from_csv(path: &Path) -> Result<Playlist> {
     }
 
     // Normalizar headers: quitar comillas y espacios, convertir a minúsculas
-    let normalized_headers: Vec<String> = headers.iter()
+    let normalized_headers: Vec<String> = headers
+        .iter()
         .map(|h| unquote(h).to_lowercase().trim().to_string())
         .collect();
 
@@ -61,21 +62,29 @@ pub async fn load_playlist_from_csv(path: &Path) -> Result<Playlist> {
         }
 
         let album = album_index.and_then(|idx| {
-            cols.get(idx).map(|s| s.trim()).filter(|s| !s.is_empty()).map(String::from)
+            cols.get(idx)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(String::from)
         });
         let isrc = isrc_index.and_then(|idx| {
-            cols.get(idx).map(|s| s.trim()).filter(|s| !s.is_empty()).map(String::from)
+            cols.get(idx)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(String::from)
         });
         let duration_seconds = duration_index.and_then(|idx| {
             cols.get(idx).and_then(|s| {
                 let s = s.trim();
-                if s.is_empty() { return None; }
+                if s.is_empty() {
+                    return None;
+                }
                 match s.parse::<f64>() {
                     Ok(ms) if ms > 0.0 => {
                         // Spotify exports duration in ms; values > 3600 are ms, smaller are already seconds
                         Some(if ms > 3600.0 { ms / 1000.0 } else { ms })
                     }
-                    _ => None
+                    _ => None,
                 }
             })
         });
@@ -94,7 +103,8 @@ pub async fn load_playlist_from_csv(path: &Path) -> Result<Playlist> {
         bail!(CsvParseError::EmptyFile);
     }
 
-    let playlist_name = path.file_stem()
+    let playlist_name = path
+        .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("Playlist CSV")
         .to_string();
@@ -110,7 +120,7 @@ pub async fn load_playlist_from_csv(path: &Path) -> Result<Playlist> {
 fn unquote(s: &str) -> String {
     let trimmed = s.trim();
     if trimmed.starts_with('"') && trimmed.ends_with('"') {
-        trimmed[1..trimmed.len()-1].to_string()
+        trimmed[1..trimmed.len() - 1].to_string()
     } else {
         trimmed.to_string()
     }
@@ -130,7 +140,8 @@ fn first_artist(value: &str) -> String {
 
 fn find_column_index(headers: &[String], candidates: &[&str]) -> Option<usize> {
     let metadata_keywords = ["uri", "url", "id", "image"];
-    headers.iter()
+    headers
+        .iter()
         .enumerate()
         .find(|(_, header)| {
             // Saltar columnas que son metadata
@@ -138,7 +149,9 @@ fn find_column_index(headers: &[String], candidates: &[&str]) -> Option<usize> {
             if is_metadata {
                 return false;
             }
-            candidates.iter().any(|candidate| header.contains(candidate))
+            candidates
+                .iter()
+                .any(|candidate| header.contains(candidate))
         })
         .map(|(idx, _)| idx)
 }

@@ -1,6 +1,6 @@
 [package]
 name = "playdex-desktop"
-version = "0.1.2"
+version = "0.2.1"
 description = "PlayDex desktop app for Windows and Linux"
 edition = "2021"
 license = "MIT"

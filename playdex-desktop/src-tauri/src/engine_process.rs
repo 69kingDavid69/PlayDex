@@ -122,7 +122,7 @@ impl EngineProcess {
         }
 
         // Buscar el script Python
-        let script_path = Self::find_script_path()?;
+        let script_path = Self::find_script_path(&inner.app)?;
 
         // Configurar variables de entorno
         let settings = tokio::runtime::Runtime::new()
@@ -166,7 +166,7 @@ impl EngineProcess {
         )
         .map_err(|e| EngineError::ProcessLaunchFailed(e.to_string()))?;
 
-        let mut child = Self::spawn_python_process(&script_path, &config_path, &arl)?;
+        let mut child = Self::spawn_python_process(&inner.app, &script_path, &config_path, &arl)?;
 
         let stdin = child.stdin.take().ok_or(EngineError::StdinUnavailable)?;
 
@@ -239,7 +239,20 @@ impl EngineProcess {
         }
     }
 
-    fn find_script_path() -> Result<PathBuf, EngineError> {
+    fn find_script_path(app: &AppHandle) -> Result<PathBuf, EngineError> {
+        use tauri::Manager;
+        
+        if let Ok(resource_dir) = app.path().resource_dir() {
+            let resource_path = resource_dir.join("resources/engine/deemix_engine.py");
+            if resource_path.exists() {
+                return Ok(resource_path);
+            }
+            let alt_path = resource_dir.join("engine/deemix_engine.py");
+            if alt_path.exists() {
+                return Ok(alt_path);
+            }
+        }
+
         // Buscar en recursos empaquetados
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(exe_dir) = exe_path.parent() {
@@ -266,11 +279,12 @@ impl EngineProcess {
     }
 
     fn spawn_python_process(
+        app: &AppHandle,
         script_path: &Path,
         config_path: &Path,
         arl: &str,
     ) -> Result<std::process::Child, EngineError> {
-        let vendor_path = Self::find_vendor_path();
+        let vendor_path = Self::find_vendor_path(app);
         let python_path = vendor_path
             .as_deref()
             .map(Self::build_python_path)
@@ -305,7 +319,7 @@ impl EngineProcess {
             match command.spawn() {
                 Ok(child) => return Ok(child),
                 Err(error) => {
-                    launch_errors.push(format!("{}: {}", candidate.label, error));
+                    launch_errors.push(format!("{} ({}): {}", candidate.label, candidate.program.to_string_lossy(), error));
                 }
             }
         }
@@ -396,7 +410,20 @@ impl EngineProcess {
         })
     }
 
-    fn find_vendor_path() -> Option<PathBuf> {
+    fn find_vendor_path(app: &AppHandle) -> Option<PathBuf> {
+        use tauri::Manager;
+        
+        if let Ok(resource_dir) = app.path().resource_dir() {
+            let resource_path = resource_dir.join("resources/engine/vendor");
+            if resource_path.exists() {
+                return Some(resource_path);
+            }
+            let alt_path = resource_dir.join("engine/vendor");
+            if alt_path.exists() {
+                return Some(alt_path);
+            }
+        }
+
         // Buscar en recursos empaquetados
         if let Ok(exe_path) = std::env::current_exe() {
             if let Some(exe_dir) = exe_path.parent() {

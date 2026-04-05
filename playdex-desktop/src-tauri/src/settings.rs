@@ -1,8 +1,8 @@
 use crate::types::AudioFormat;
+use anyhow::Result;
+use dirs;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use dirs;
-use anyhow::Result;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
@@ -31,7 +31,10 @@ fn default_download_location() -> String {
     if let Some(music_dir) = dirs::audio_dir() {
         music_dir.join("PlayDex").to_string_lossy().into_owned()
     } else if let Some(home) = dirs::home_dir() {
-        home.join("Music").join("PlayDex").to_string_lossy().into_owned()
+        home.join("Music")
+            .join("PlayDex")
+            .to_string_lossy()
+            .into_owned()
     } else {
         "~/Music/PlayDex".to_string()
     }
