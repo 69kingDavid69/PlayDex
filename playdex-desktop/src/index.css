@@ -1,3 +1,446 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+/* ── PlayDex Design System ── */
+@theme {
+  --color-surface-900: #0d0d14;
+  --color-surface-800: #13131f;
+  --color-surface-700: #1a1a2e;
+  --color-surface-600: #22223a;
+  --color-surface-500: #2d2d4a;
+  --color-surface-400: #3a3a5c;
+  --color-surface-300: #52527a;
+  --color-surface-200: #7a7a9e;
+  --color-surface-100: #a8a8c8;
+
+  --color-accent-500: #6c5ce7;
+  --color-accent-400: #a29bfe;
+  --color-accent-300: #c4b5fd;
+  --color-accent-600: #5a45d6;
+
+  --color-success-500: #00b894;
+  --color-success-400: #55efc4;
+
+  --color-warning-500: #fdcb6e;
+  --color-warning-400: #ffeaa7;
+
+  --color-danger-500: #e17055;
+  --color-danger-400: #fab1a0;
+
+  --color-info-500: #0984e3;
+  --color-info-400: #74b9ff;
+}
+
+/* ── Base Reset ── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body, #root {
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--color-surface-900);
+    color: #e0e0f0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-surface-400);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-surface-300);
+  }
+}
+
+/* ── Animations ── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(108, 92, 231, 0.4); }
+  50% { box-shadow: 0 0 16px 4px rgba(108, 92, 231, 0.15); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes progress-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out both;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* ── Glass Effect ── */
+.glass {
+  background: rgba(26, 26, 46, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-light {
+  background: rgba(42, 42, 68, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* ── Button Styles ── */
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-accent-500), var(--color-accent-600));
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.02em;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(108, 92, 231, 0.3);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: var(--color-surface-500);
+  color: var(--color-surface-100);
+  border: 1px solid var(--color-surface-400);
+  padding: 8px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--color-surface-400);
+  border-color: var(--color-surface-300);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, var(--color-success-500), #00a884);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-success:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 184, 148, 0.3);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, var(--color-danger-500), #d63031);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+  filter: brightness(1.15);
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-warning:hover {
+  filter: brightness(1.15);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-surface-200);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-ghost:hover {
+  background: var(--color-surface-600);
+  color: var(--color-accent-400);
+}
+
+/* ── Input Styles ── */
+.input-field {
+  width: 100%;
+  background: var(--color-surface-800);
+  border: 1px solid var(--color-surface-500);
+  color: #e0e0f0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.input-field::placeholder {
+  color: var(--color-surface-300);
+}
+
+.input-field:focus {
+  border-color: var(--color-accent-500);
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
+}
+
+.select-field {
+  width: 100%;
+  background: var(--color-surface-800);
+  border: 1px solid var(--color-surface-500);
+  color: #e0e0f0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237a7a9e' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.select-field:focus {
+  border-color: var(--color-accent-500);
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
+}
+
+/* ── Checkbox ── */
+.checkbox-custom {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-surface-400);
+  border-radius: 5px;
+  background: var(--color-surface-800);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.checkbox-custom:checked {
+  background: var(--color-accent-500);
+  border-color: var(--color-accent-500);
+}
+
+.checkbox-custom:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── Status Badge ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.badge-downloading {
+  background: rgba(9, 132, 227, 0.15);
+  color: var(--color-info-400);
+}
+
+.badge-completed {
+  background: rgba(0, 184, 148, 0.15);
+  color: var(--color-success-400);
+}
+
+.badge-error {
+  background: rgba(225, 112, 85, 0.15);
+  color: var(--color-danger-400);
+}
+
+.badge-pending {
+  background: rgba(168, 168, 200, 0.1);
+  color: var(--color-surface-200);
+}
+
+.badge-skipped {
+  background: rgba(253, 203, 110, 0.15);
+  color: var(--color-warning-500);
+}
+
+.badge-format {
+  background: rgba(108, 92, 231, 0.15);
+  color: var(--color-accent-400);
+}
+
+.badge-format-flac {
+  background: rgba(0, 184, 148, 0.15);
+  color: var(--color-success-400);
+}
+
+/* ── Progress Bar ── */
+.progress-bar-track {
+  width: 100%;
+  height: 4px;
+  background: var(--color-surface-600);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--color-accent-500), var(--color-info-400));
+  transition: width 0.3s ease;
+}
+
+/* ── Summary Chip ── */
+.summary-chip {
+  padding: 10px 14px;
+  background: var(--color-surface-700);
+  border: 1px solid var(--color-surface-600);
+  border-radius: 12px;
+  min-width: 80px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.summary-chip:hover {
+  border-color: var(--color-surface-400);
+  background: var(--color-surface-600);
+}
+
+/* ── Modal Backdrop ── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: var(--color-surface-800);
+  border: 1px solid var(--color-surface-600);
+  border-radius: 16px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  max-width: 600px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+/* ── Tab styles ── */
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  background: var(--color-surface-900);
+  border-radius: 12px;
+  padding: 3px;
+}
+
+.tab-item {
+  flex: 1;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-surface-200);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.tab-item:hover {
+  color: #e0e0f0;
+  background: var(--color-surface-700);
+}
+
+.tab-item-active {
+  background: var(--color-accent-500) !important;
+  color: white !important;
+  font-weight: 600;
+}

@@ -5,6 +5,16 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { Playlist, DownloadJob, DownloadState } from '../types'
 import { EngineEvent } from '../types/engineEvents'
 
+// Matches the Rust Settings struct
+interface BackendSettings {
+  download_location: string
+  preferred_format: 'FLAC' | 'MP3_320'
+  allow_fallback: boolean
+  reject_below_320: boolean
+  parallel_downloads: number
+  retry_count: number
+}
+
 interface DownloadStore {
   // Estado
   playlists: Playlist[]
@@ -15,6 +25,16 @@ interface DownloadStore {
   isPaused: boolean
   csvPlaylistUrl: string | null
   engineReady: boolean
+
+  // Settings
+  settingsOpen: boolean
+  downloadPath: string
+  preferredFormat: 'FLAC' | 'MP3_320'
+  allowFallback: boolean
+  rejectBelow320: boolean
+  arlToken: string
+  parallelDownloads: number
+  retryCount: number
 
   // Acciones
   bootstrapIfNeeded: () => Promise<void>
@@ -29,6 +49,17 @@ interface DownloadStore {
   cancelAll: () => void
   handleEngineEvent: (event: EngineEvent) => void
 
+  // Settings actions
+  openSettings: () => void
+  closeSettings: () => void
+  setDownloadPath: (path: string) => void
+  setPreferredFormat: (format: 'FLAC' | 'MP3_320') => void
+  setAllowFallback: (allow: boolean) => void
+  setRejectBelow320: (reject: boolean) => void
+  setArlToken: (token: string) => void
+  browseDownloadPath: () => Promise<void>
+  saveSettings: () => Promise<void>
+
   // Computed (getters)
   selectedPlaylist: () => Playlist | null
   isDownloading: () => boolean
@@ -41,6 +72,8 @@ interface QueueSummary {
   completed: number
   downloading: number
   errors: number
+  pending: number
+  skipped: number
 }
 
 const useDownloadStore = create<DownloadStore>((set, get) => ({
@@ -52,6 +85,16 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
   isPaused: false,
   csvPlaylistUrl: null,
   engineReady: false,
+
+  // Settings state
+  settingsOpen: false,
+  downloadPath: '~/Music/PlayDex',
+  preferredFormat: 'FLAC',
+  allowFallback: true,
+  rejectBelow320: false,
+  arlToken: '',
+  parallelDownloads: 3,
+  retryCount: 2,
 
   selectedPlaylist: () => {
     const state = get()
@@ -67,7 +110,9 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
     const completed = state.jobs.filter(j => j.status === 'completed').length
     const downloading = state.jobs.filter(j => j.status === 'downloading').length
     const errors = state.jobs.filter(j => j.status === 'error').length
-    return { total, completed, downloading, errors }
+    const pending = state.jobs.filter(j => j.status === 'pending').length
+    const skipped = state.jobs.filter(j => j.status === 'skipped').length
+    return { total, completed, downloading, errors, pending, skipped }
   },
   menuBarStatusText: () => {
     const summary = get().queueSummary()
@@ -76,15 +121,39 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
 
   bootstrapIfNeeded: async () => {
     try {
+      // Load saved settings from Rust backend
+      try {
+        const settings = await invoke<BackendSettings>('get_settings')
+        if (settings) {
+          set({
+            downloadPath: settings.download_location || '~/Music/PlayDex',
+            preferredFormat: settings.preferred_format || 'FLAC',
+            allowFallback: settings.allow_fallback ?? true,
+            rejectBelow320: settings.reject_below_320 ?? false,
+            parallelDownloads: settings.parallel_downloads ?? 3,
+            retryCount: settings.retry_count ?? 2,
+          })
+        }
+      } catch (e) {
+        console.warn('Could not load settings:', e)
+      }
+
+      // Load ARL token from keyring
+      try {
+        const arl = await invoke<string>('get_arl')
+        if (arl) {
+          set({ arlToken: arl })
+        }
+      } catch (e) {
+        console.warn('Could not load ARL:', e)
+      }
+
       await invoke('start_engine')
       
-      // Suscribirse a eventos del engine
+      // Subscribe to engine events
       await listen<EngineEvent>('engine-event', ({ payload }) => {
         get().handleEngineEvent(payload)
       })
-      
-      // Guardar la función para desuscribirse si es necesario
-      // (podríamos guardarla en el estado si necesitamos limpiar)
     } catch (error) {
       set({ lastErrorMessage: String(error), bridgeStatusText: 'Error al iniciar engine' })
     }
@@ -101,7 +170,7 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
         filters: [{ name: 'XML de iTunes/Music', extensions: ['xml'] }],
         title: 'Seleccionar archivo XML de librería'
       })
-      if (!selected) return // usuario canceló
+      if (!selected) return
       const playlists = await invoke<Playlist[]>('import_xml', { customPath: selected })
       set((state) => ({ playlists: [...state.playlists, ...playlists] }))
     } catch (error) {
@@ -137,7 +206,6 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
     const selectedPlaylist = state.playlists.find(p => p.id === state.selectedPlaylistId) || state.playlists[0]
     if (!selectedPlaylist) return
     
-    // Crear jobs para cada track
     const jobs: DownloadJob[] = selectedPlaylist.tracks.map(track => ({
       id: crypto.randomUUID(),
       playlistName: selectedPlaylist.name,
@@ -176,13 +244,65 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
     set({ jobs: [] })
   },
 
+  // Settings actions
+  openSettings: () => set({ settingsOpen: true }),
+  closeSettings: () => set({ settingsOpen: false }),
+  setDownloadPath: (path: string) => set({ downloadPath: path }),
+  setPreferredFormat: (format: 'FLAC' | 'MP3_320') => set({ preferredFormat: format }),
+  setAllowFallback: (allow: boolean) => set({ allowFallback: allow }),
+  setRejectBelow320: (reject: boolean) => set({ rejectBelow320: reject }),
+  setArlToken: (token: string) => set({ arlToken: token }),
+  
+  browseDownloadPath: async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Seleccionar carpeta de descargas'
+      })
+      if (selected) {
+        set({ downloadPath: selected as string })
+      }
+    } catch (error) {
+      console.error('Error selecting directory:', error)
+    }
+  },
+
+  saveSettings: async () => {
+    const state = get()
+    
+    // Save settings to Rust backend
+    try {
+      const backendSettings: BackendSettings = {
+        download_location: state.downloadPath,
+        preferred_format: state.preferredFormat,
+        allow_fallback: state.allowFallback,
+        reject_below_320: state.rejectBelow320,
+        parallel_downloads: state.parallelDownloads,
+        retry_count: state.retryCount,
+      }
+      await invoke('save_settings', { settings: backendSettings })
+    } catch (e) {
+      console.warn('Could not save settings to backend:', e)
+    }
+    
+    // Save ARL to keyring
+    try {
+      await invoke('save_arl', { arl: state.arlToken })
+    } catch (e) {
+      console.warn('Could not save ARL:', e)
+    }
+    
+    set({ settingsOpen: false })
+  },
+
   handleEngineEvent: (event: EngineEvent) => {
     console.log('Engine event received:', event)
     
     switch (event.event) {
       case 'bridge_ready':
         set({
-          bridgeStatusText: `Engine listo - Deezer: ${event.deemix_available ? 'OK' : 'No disponible'}`,
+          bridgeStatusText: `Engine listo – Deezer: ${event.deemix_available ? 'OK' : 'No disponible'}`,
           engineReady: event.download_ready
         })
         break
@@ -256,7 +376,7 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
         
       case 'playlist_done':
         set({
-          bridgeStatusText: `Playlist "${event.playlist}" completada - ${event.stats.completed} OK, ${event.stats.skipped} saltadas, ${event.stats.errors} errores`
+          bridgeStatusText: `Playlist "${event.playlist}" completada – ${event.stats.completed} OK, ${event.stats.skipped} saltadas, ${event.stats.errors} errores`
         })
         break
         
@@ -267,8 +387,6 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
         })
         break
     }
-    
-
   }
 }))
 
