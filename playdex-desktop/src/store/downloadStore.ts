@@ -151,7 +151,7 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
       }
 
       // Subscribe to engine events BEFORE invoking start_engine
-      const _unlisten = await listen<EngineEvent>('engine-event', ({ payload }) => {
+      await listen<EngineEvent>('engine-event', ({ payload }) => {
         get().handleEngineEvent(payload)
       })
 
