@@ -24,7 +24,8 @@ interface DownloadStore {
   lastErrorMessage: string | null
   isPaused: boolean
   csvPlaylistUrl: string | null
-  engineReady: boolean
+  engineStarted: boolean
+  downloadReady: boolean
 
   // Settings
   settingsOpen: boolean
@@ -84,7 +85,8 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
   lastErrorMessage: null,
   isPaused: false,
   csvPlaylistUrl: null,
-  engineReady: false,
+  engineStarted: false,
+  downloadReady: false,
 
   // Settings state
   settingsOpen: false,
@@ -148,14 +150,24 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
         console.warn('Could not load ARL:', e)
       }
 
-      await invoke('start_engine')
-      
-      // Subscribe to engine events
-      await listen<EngineEvent>('engine-event', ({ payload }) => {
+      // Subscribe to engine events BEFORE invoking start_engine
+      const _unlisten = await listen<EngineEvent>('engine-event', ({ payload }) => {
         get().handleEngineEvent(payload)
       })
-    } catch (error) {
-      set({ lastErrorMessage: String(error), bridgeStatusText: 'Error al iniciar engine' })
+
+      try {
+        await invoke('start_engine')
+      } catch (error) {
+        set({ 
+          lastErrorMessage: String(error) || 'Error desconocido al invocar engine', 
+          bridgeStatusText: 'Error en arranque del engine' 
+        })
+      }
+    } catch (error: NodeJS.ErrnoException | any) {
+      set({ 
+        lastErrorMessage: (error && error.message) ? error.message : String(error), 
+        bridgeStatusText: 'Error general en inicio' 
+      })
     }
   },
 
@@ -302,8 +314,11 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
     switch (event.event) {
       case 'bridge_ready':
         set({
-          bridgeStatusText: `Engine listo – Deezer: ${event.deemix_available ? 'OK' : 'No disponible'}`,
-          engineReady: event.download_ready
+          bridgeStatusText: event.download_ready
+            ? `Engine listo – Deezer: ${event.deemix_available ? 'OK' : 'No disponible'}`
+            : 'Engine iniciado, falta ARL para descargar',
+          engineStarted: true,
+          downloadReady: event.download_ready
         })
         break
         

@@ -1,7 +1,7 @@
 import useDownloadStore from '../store/downloadStore'
 
 export default function TrackList() {
-  const { selectedPlaylist, queueSelectedPlaylist } = useDownloadStore()
+  const { selectedPlaylist, queueSelectedPlaylist, engineStarted } = useDownloadStore()
   const selected = selectedPlaylist()
 
   if (!selected) {
@@ -30,8 +30,9 @@ export default function TrackList() {
           </p>
         </div>
         <button 
-          className="btn-success flex items-center gap-2"
+          className="btn-success flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={queueSelectedPlaylist}
+          disabled={!engineStarted}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />

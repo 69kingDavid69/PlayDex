@@ -42,7 +42,7 @@ pub struct PlaylistStats {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "event", content = "data")]
+#[serde(tag = "event", rename_all = "snake_case")]
 pub enum EngineEvent {
     BridgeReady {
         deemix_available: bool,
@@ -133,7 +133,7 @@ impl EngineProcess {
         let arl = tokio::runtime::Runtime::new()
             .unwrap()
             .block_on(keyring::get_arl())
-            .map_err(|e| EngineError::ProcessLaunchFailed(e.to_string()))?;
+            .unwrap_or_default();
 
         // Crear configuración del engine
         let config_path = settings::config_file_path()
