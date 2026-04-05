@@ -1,20 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react'
 import './App.css'
 
-const DMG_URL = 'https://github.com/69kingDavid69/PlayDex/releases/download/v1.0.0/PlayDex-1.0.dmg'
+const VERSION = '0.2.1'
+const MAC_URL = `https://github.com/69kingDavid69/PlayDex/releases/download/playdex-desktop-v${VERSION}/PlayDex_${VERSION}_x64.dmg`
+const WIN_URL = `https://github.com/69kingDavid69/PlayDex/releases/download/playdex-desktop-v${VERSION}/PlayDex_${VERSION}_x64_en-US.msi`
+const LINUX_URL = `https://github.com/69kingDavid69/PlayDex/releases/download/playdex-desktop-v${VERSION}/playdex-desktop_${VERSION}_amd64.deb`
 const GITHUB_URL = 'https://github.com/69kingDavid69/PlayDex'
 
 const content = {
   en: {
     tagline: 'Your playlists. Your files.',
-    sub: 'Import from Spotify CSV or iTunes XML and download in FLAC or MP3 320 — all on your Mac, offline, forever.',
-    download: 'Download for macOS',
-    version: 'v1.0.0 · macOS 13+',
+    sub: 'Import from Spotify CSV or iTunes XML and download in FLAC or MP3 320 — all on your computer, offline, forever.',
+    version: `v${VERSION} · macOS / Windows / Linux`,
     installTitle: 'How to install',
     steps: [
-      { icon: '⬇️', text: 'Download the DMG and open it' },
-      { icon: '📂', text: 'Drag PlayDex to Applications' },
-      { icon: '🖱️', text: 'First launch: right-click → Open' },
+      { icon: '⬇️', text: 'Download the installer and open it' },
+      { icon: '📂', text: 'Install or drag to Applications' },
+      { icon: '🖱️', text: 'First launch: approve permissions if asked' },
       { icon: '🔑', text: 'Add your Deezer ARL token in Settings' },
     ],
     featuresTitle: 'Features',
@@ -22,23 +24,23 @@ const content = {
       { icon: '📋', title: 'CSV from Spotify', desc: 'Export your playlist from Exportify and import it directly. Supports multi-artist fields.' },
       { icon: '🎵', title: 'XML from iTunes', desc: 'Works with Music.app exported XML libraries. Smart column detection.' },
       { icon: '🎶', title: 'FLAC & MP3 320', desc: 'Download in lossless FLAC or high-quality MP3 320 via Deezer + deemix.' },
-      { icon: '🔒', title: 'Secure ARL', desc: 'Your Deezer token is stored encrypted in macOS Keychain. Never in the source code.' },
+      { icon: '🔒', title: 'Secure ARL', desc: 'Your Deezer token is stored encrypted in your system keyring. Never in the source code.' },
+      { icon: '💻', title: 'Multi-platform', desc: 'Available for macOS, Windows, and Linux with full native experience.' },
     ],
     noteTitle: 'Note',
-    note: 'On first open, macOS may show a security warning because PlayDex is not notarized with Apple. Right-click → Open to proceed. This is normal for free open-source apps.',
+    note: 'On some OS like macOS or Windows, you may see a security warning since PlayDex is an indie app. Proceed anyways, it is normal for open-source.',
     sourceCode: 'Source code on GitHub',
     footer: 'Free and open-source · MIT License',
   },
   es: {
     tagline: 'Tus playlists. Tus archivos.',
-    sub: 'Importa desde Spotify CSV o iTunes XML y descarga en FLAC o MP3 320 — en tu Mac, sin internet, para siempre.',
-    download: 'Descargar para macOS',
-    version: 'v1.0.0 · macOS 13+',
+    sub: 'Importa desde Spotify CSV o iTunes XML y descarga en FLAC o MP3 320 — en tu computadora, sin internet, para siempre.',
+    version: `v${VERSION} · macOS / Windows / Linux`,
     installTitle: 'Cómo instalar',
     steps: [
-      { icon: '⬇️', text: 'Descarga el DMG y ábrelo' },
-      { icon: '📂', text: 'Arrastra PlayDex a Aplicaciones' },
-      { icon: '🖱️', text: 'Primera vez: clic derecho → Abrir' },
+      { icon: '⬇️', text: 'Descarga el instalador y ábrelo' },
+      { icon: '📂', text: 'Instálalo o arrástralo a Aplicaciones' },
+      { icon: '🖱️', text: 'Primera vez: aprueba los permisos si te pregunta' },
       { icon: '🔑', text: 'Agrega tu token ARL de Deezer en Ajustes' },
     ],
     featuresTitle: 'Características',
@@ -46,10 +48,11 @@ const content = {
       { icon: '📋', title: 'CSV de Spotify', desc: 'Exporta tu playlist con Exportify e impórtala directamente. Soporta campos de múltiples artistas.' },
       { icon: '🎵', title: 'XML de iTunes', desc: 'Compatible con librerías XML exportadas desde Music.app. Detección automática de columnas.' },
       { icon: '🎶', title: 'FLAC y MP3 320', desc: 'Descarga en FLAC sin pérdida o MP3 320 de alta calidad vía Deezer + deemix.' },
-      { icon: '🔒', title: 'ARL seguro', desc: 'Tu token de Deezer se guarda cifrado en el Keychain de macOS. Nunca en el código fuente.' },
+      { icon: '🔒', title: 'ARL seguro', desc: 'Tu token de Deezer se guarda cifrado en el llavero de tu sistema. Nunca en el código fuente.' },
+      { icon: '💻', title: 'Multiplataforma', desc: 'Disponible para macOS, Windows, y Linux con experiencia nativa completa.' },
     ],
     noteTitle: 'Nota',
-    note: 'Al abrirla la primera vez, macOS puede mostrar una advertencia de seguridad porque PlayDex no está notarizado con Apple. Clic derecho → Abrir para continuar. Es normal en apps de código abierto gratuitas.',
+    note: 'Al abrirla, tu sistema (macOS o Windows) puede mostrar una advertencia de seguridad ya que PlayDex es app indie. Continúa normalmente, es estándar en código abierto.',
     sourceCode: 'Código fuente en GitHub',
     footer: 'Gratuito y de código abierto · Licencia MIT',
   },
@@ -205,10 +208,17 @@ export default function App() {
           <h1 className="hero-title">PlayDex</h1>
           <p className="hero-tagline">{t.tagline}</p>
           <p className="hero-sub">{t.sub}</p>
-          <a href={DMG_URL} className="download-btn" download>
-            <span className="download-icon">⬇</span>
-            {t.download}
-          </a>
+          <div className="download-grid">
+            <a href={MAC_URL} className="download-btn" download>
+              <span className="download-icon"></span> macOS
+            </a>
+            <a href={WIN_URL} className="download-btn" download>
+              <span className="download-icon">⊞</span> Windows
+            </a>
+            <a href={LINUX_URL} className="download-btn" download>
+              <span className="download-icon">🐧</span> Linux
+            </a>
+          </div>
           <p className="version-label">{t.version}</p>
         </div>
       </section>

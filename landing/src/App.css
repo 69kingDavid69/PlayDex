@@ -123,14 +123,23 @@ body {
 }
 
 /* ─── Download button ───────────────────────────────────── */
+.download-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1rem;
+}
+
 .download-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
-  padding: 1rem 2.4rem;
+  padding: 0.8rem 1.8rem;
   font-family: 'Inter', sans-serif;
   font-weight: 600;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   letter-spacing: 0.03em;
   color: #fff;
   text-decoration: none;
