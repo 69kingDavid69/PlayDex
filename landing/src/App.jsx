@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import './App.css'
 
-const VERSION = '0.2.4'
+const VERSION = '0.2.5'
 const MAC_URL = `https://github.com/69kingDavid69/PlayDex/releases/download/playdex-desktop-v${VERSION}/PlayDex_${VERSION}_x64.dmg`
 const WIN_URL = `https://github.com/69kingDavid69/PlayDex/releases/download/playdex-desktop-v${VERSION}/PlayDex_${VERSION}_x64_en-US.msi`
 const LINUX_URL = `https://github.com/69kingDavid69/PlayDex/releases/download/playdex-desktop-v${VERSION}/playdex-desktop_${VERSION}_amd64.deb`
