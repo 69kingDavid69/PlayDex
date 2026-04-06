@@ -123,10 +123,31 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
   },
 
   bootstrapIfNeeded: async () => {
+    console.log('Bootstrap started');
+    set({ bridgeStatusText: 'Iniciando engine...' });
+
+    // Subscribe to engine events BEFORE invoking start_engine
+    await listen<EngineEvent>('engine-event', ({ payload }) => {
+      get().handleEngineEvent(payload);
+    });
+
+    // Start engine immediately, don't wait for settings/ARL
     try {
-      // Load saved settings from Rust backend
+      await invoke('start_engine');
+      console.log('Engine start invoked');
+      set({ bridgeStatusText: 'Engine arrancando...' });
+    } catch (error) {
+      set({ 
+        lastErrorMessage: String(error) || 'Error desconocido al invocar engine', 
+        bridgeStatusText: 'Error en arranque del engine' 
+      });
+      return;
+    }
+
+    // Load settings and ARL in background
+    (async () => {
       try {
-        const settings = await invoke<BackendSettings>('get_settings')
+        const settings = await invoke<BackendSettings>('get_settings');
         if (settings) {
           set({
             downloadPath: settings.download_location || '~/Music/PlayDex',
@@ -135,52 +156,33 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
             rejectBelow320: settings.reject_below_320 ?? false,
             parallelDownloads: settings.parallel_downloads ?? 3,
             retryCount: settings.retry_count ?? 2,
-          })
+          });
+          console.log('Settings loaded');
         }
       } catch (e) {
-        console.warn('Could not load settings:', e)
+        console.warn('Could not load settings:', e);
       }
 
-      // Load ARL token from keyring
       try {
-        const arl = await invoke<string>('get_arl')
+        const arl = await invoke<string>('get_arl');
         if (arl) {
-          set({ arlToken: arl })
+          set({ arlToken: arl });
+          console.log('ARL loaded');
         }
       } catch (e) {
-        console.warn('Could not load ARL:', e)
+        console.warn('Could not load ARL:', e);
       }
+    })();
 
-      // Subscribe to engine events BEFORE invoking start_engine
-      await listen<EngineEvent>('engine-event', ({ payload }) => {
-        get().handleEngineEvent(payload)
-      })
-
-      try {
-        await invoke('start_engine')
-        
-        // Timeout para el handshake de bridge_ready
-        setTimeout(() => {
-          if (!get().engineStarted) {
-            set({
-              bridgeStatusText: 'Error: Engine no respondió (timeout)',
-              lastErrorMessage: 'El proceso inició pero no emitió bridge_ready a tiempo.'
-            })
-          }
-        }, 5000)
-        
-      } catch (error) {
-        set({ 
-          lastErrorMessage: String(error) || 'Error desconocido al invocar engine', 
-          bridgeStatusText: 'Error en arranque del engine' 
-        })
+    // Timeout para el handshake de bridge_ready
+    setTimeout(() => {
+      if (!get().engineStarted) {
+        set({
+          bridgeStatusText: 'Error: Engine no respondió (timeout)',
+          lastErrorMessage: 'El proceso inició pero no emitió bridge_ready a tiempo.'
+        });
       }
-    } catch (error: NodeJS.ErrnoException | any) {
-      set({ 
-        lastErrorMessage: (error && error.message) ? error.message : String(error), 
-        bridgeStatusText: 'Error general en inicio' 
-      })
-    }
+    }, 5000);
   },
 
   restartEngine: async () => {
@@ -297,7 +299,15 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
   cancelAll: async () => {
     try {
       await invoke('cancel_download')
-      set({ jobs: [] })
+      // Marcar jobs pendientes o en descarga como cancelados, no borrarlos
+      set(state => ({
+        jobs: state.jobs.map(job => 
+          (job.status === 'pending' || job.status === 'downloading') 
+            ? { ...job, status: 'cancelled' as DownloadState }
+            : job
+        ),
+        isPaused: false
+      }))
     } catch (error) {
       set({ lastErrorMessage: String(error) })
     }
@@ -462,10 +472,23 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
         break
         
       case 'bridge_error':
-        set({
-          lastErrorMessage: event.message,
-          bridgeStatusText: 'Error en el engine'
-        })
+        if (event.error_code === 'CANCELLED') {
+          set(state => ({
+            lastErrorMessage: event.message,
+            bridgeStatusText: 'Descarga cancelada',
+            jobs: state.jobs.map(job => 
+              (job.status === 'pending' || job.status === 'downloading') 
+                ? { ...job, status: 'cancelled' as DownloadState }
+                : job
+            ),
+            isPaused: false
+          }))
+        } else {
+          set({
+            lastErrorMessage: event.message,
+            bridgeStatusText: 'Error en el engine'
+          })
+        }
         break
     }
   }

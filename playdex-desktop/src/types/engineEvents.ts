@@ -50,6 +50,6 @@ export type EngineEvent =
     }
   | {
       event: 'bridge_error'
-      error_code: string
+      error_code?: string
       message: string
     }

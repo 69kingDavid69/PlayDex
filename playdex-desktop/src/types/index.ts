@@ -23,7 +23,7 @@ export interface Playlist {
 }
 
 // Equivalente de DownloadState
-export type DownloadState = 'pending' | 'downloading' | 'completed' | 'skipped' | 'error' | 'paused'
+export type DownloadState = 'pending' | 'downloading' | 'completed' | 'skipped' | 'error' | 'paused' | 'cancelled'
 
 // Equivalente de DownloadJob.swift
 export interface DownloadJob {

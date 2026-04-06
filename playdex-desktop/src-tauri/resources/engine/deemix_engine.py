@@ -709,6 +709,11 @@ async def handle_command(
     if command_name == "cancel":
         runtime.cancel_requested = True
         runtime.pause_gate.set()
+        emit({
+            "event": "bridge_error",
+            "error_code": "CANCELLED",
+            "message": "Descarga cancelada por el usuario",
+        })
         return
 
     emit(

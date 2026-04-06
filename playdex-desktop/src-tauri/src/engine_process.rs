@@ -77,7 +77,7 @@ pub enum EngineEvent {
         stats: PlaylistStats,
     },
     BridgeError {
-        error_code: String,
+        error_code: Option<String>,
         message: String,
     },
 }
@@ -114,36 +114,35 @@ impl EngineProcess {
         }
     }
 
-    pub fn start(&self) -> Result<(), EngineError> {
-        let mut inner = self.inner.lock().unwrap();
+    pub async fn start(&self) -> Result<(), EngineError> {
+        let app;
+        let script_path;
+        {
+            let mut inner = self.inner.lock().unwrap();
 
-        if let Some(mut process) = inner.process.take() {
-            match process.try_wait() {
-                Ok(Some(_)) | Err(_) => {
-                    // El proceso murió o dio error, podemos iniciar uno nuevo
-                    inner.stdin = None;
-                    inner.stdout_thread = None;
-                }
-                Ok(None) => {
-                    // El proceso sigue corriendo
-                    inner.process = Some(process);
-                    return Ok(());
+            if let Some(mut process) = inner.process.take() {
+                match process.try_wait() {
+                    Ok(Some(_)) | Err(_) => {
+                        inner.stdin = None;
+                        inner.stdout_thread = None;
+                    }
+                    Ok(None) => {
+                        inner.process = Some(process);
+                        return Ok(());
+                    }
                 }
             }
-        }
-
-        // Buscar el script Python
-        let script_path = Self::find_script_path(&inner.app)?;
+            app = inner.app.clone();
+            script_path = Self::find_script_path(&inner.app)?;
+        } // lock released
 
         // Configurar variables de entorno
-        let settings = tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(settings::get_settings())
+        let settings = settings::get_settings()
+            .await
             .map_err(|e| EngineError::ProcessLaunchFailed(e.to_string()))?;
 
-        let arl = tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(keyring::get_arl())
+        let arl = keyring::get_arl()
+            .await
             .unwrap_or_default();
 
         // Crear configuración del engine
@@ -161,9 +160,16 @@ impl EngineProcess {
                     crate::types::AudioFormat::FLAC => "FLAC",
                     crate::types::AudioFormat::MP3_320 => "MP3_320",
                 },
-                "fallback_chain": match settings.preferred_format {
-                    crate::types::AudioFormat::FLAC => vec!["FLAC", "MP3_320"],
-                    crate::types::AudioFormat::MP3_320 => vec!["MP3_320"],
+                "fallback_chain": if settings.allow_fallback {
+                    match settings.preferred_format {
+                        crate::types::AudioFormat::FLAC => vec!["FLAC", "MP3_320"],
+                        crate::types::AudioFormat::MP3_320 => vec!["MP3_320"],
+                    }
+                } else {
+                    match settings.preferred_format {
+                        crate::types::AudioFormat::FLAC => vec!["FLAC"],
+                        crate::types::AudioFormat::MP3_320 => vec!["MP3_320"],
+                    }
                 },
                 "reject_below": if settings.reject_below_320 { serde_json::Value::String("MP3_320".to_string()) } else { serde_json::Value::Null },
             },
@@ -177,11 +183,9 @@ impl EngineProcess {
         )
         .map_err(|e| EngineError::ProcessLaunchFailed(e.to_string()))?;
 
-        let mut child = Self::spawn_python_process(&inner.app, &script_path, &config_path, &arl)?;
+        let mut child = Self::spawn_python_process(&app, &script_path, &config_path, &arl)?;
 
         let stdin = child.stdin.take().ok_or(EngineError::StdinUnavailable)?;
-
-        let app = inner.app.clone();
         let stdout = child.stdout.take().unwrap();
 
         // Hilo para leer stdout
@@ -210,6 +214,8 @@ impl EngineProcess {
             }
         });
 
+        // Lock again to store child, stdin, stdout_thread
+        let mut inner = self.inner.lock().unwrap();
         inner.process = Some(child);
         inner.stdin = Some(stdin);
         inner.stdout_thread = Some(stdout_thread);
@@ -464,7 +470,7 @@ impl EngineProcess {
 // Funciones públicas que expone el módulo
 pub async fn start_engine(app: AppHandle) -> Result<(), EngineError> {
     let engine = EngineProcess::new(app);
-    engine.start()?;
+    engine.start().await?;
 
     // Guardar la referencia al engine en el estado de la aplicación
     // (esto requeriría un estado compartido, se implementará más tarde)

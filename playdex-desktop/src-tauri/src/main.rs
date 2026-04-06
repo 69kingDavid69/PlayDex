@@ -54,7 +54,7 @@ async fn start_engine(
     state: tauri::State<'_, AppState>,
 ) -> Result<(), String> {
     let engine = EngineProcess::new(app.clone());
-    engine.start().map_err(|e| e.to_string())?;
+    engine.start().await.map_err(|e| e.to_string())?;
 
     let mut engine_guard = state.engine.lock().map_err(|e| e.to_string())?;
     *engine_guard = Some(engine);
