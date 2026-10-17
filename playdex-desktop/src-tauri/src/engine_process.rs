@@ -146,7 +146,7 @@ impl EngineProcess {
             .unwrap_or_default();
 
         // Crear configuración del engine
-        let config_path = settings::config_file_path()
+        let config_path = settings::engine_config_file_path()
             .map_err(|e| EngineError::ProcessLaunchFailed(e.to_string()))?;
         let config_dir = config_path.parent().unwrap();
         std::fs::create_dir_all(config_dir)

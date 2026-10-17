@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Settings {
     pub download_location: String,
     pub preferred_format: AudioFormat,
@@ -43,9 +44,18 @@ fn default_download_location() -> String {
 pub async fn get_settings() -> Result<Settings> {
     let config_path = config_file_path()?;
     if config_path.exists() {
-        let content = tokio::fs::read_to_string(config_path).await?;
-        let settings = serde_json::from_str(&content)?;
-        Ok(settings)
+        let content = tokio::fs::read_to_string(&config_path).await?;
+        match serde_json::from_str(&content) {
+            Ok(settings) => Ok(settings),
+            Err(error) => {
+                // Un config.json dañado (o escrito por una versión anterior) no debe
+                // impedir que arranque el engine: se vuelve a los valores por defecto.
+                eprintln!("config.json inválido ({error}); se restauran los ajustes por defecto");
+                let settings = Settings::default();
+                save_settings(settings.clone()).await?;
+                Ok(settings)
+            }
+        }
     } else {
         let settings = Settings::default();
         save_settings(settings.clone()).await?;
@@ -62,9 +72,44 @@ pub async fn save_settings(settings: Settings) -> Result<()> {
     Ok(())
 }
 
-pub fn config_file_path() -> Result<PathBuf> {
-    let config_dir = dirs::config_dir()
+fn config_dir() -> PathBuf {
+    let base = dirs::config_dir()
         .or_else(|| dirs::home_dir().map(|h| h.join(".config")))
         .unwrap_or_else(|| PathBuf::from("."));
-    Ok(config_dir.join("playdex").join("config.json"))
+    base.join("playdex")
+}
+
+/// Ajustes de la app (formato snake_case, los lee y escribe `Settings`).
+pub fn config_file_path() -> Result<PathBuf> {
+    Ok(config_dir().join("config.json"))
+}
+
+/// Configuración que se genera para el engine de Python. Va en un archivo aparte:
+/// si compartiera `config.json`, el engine sobrescribiría los ajustes de la app.
+pub fn engine_config_file_path() -> Result<PathBuf> {
+    Ok(config_dir().join("engine_config.json"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn engine_style_config_does_not_break_settings() {
+        // Formato que el engine escribía antes en el mismo config.json
+        let engine_json = r#"{
+            "downloadLocation": "C:/Music",
+            "quality": { "preferred": "FLAC", "fallback_chain": ["FLAC"], "reject_below": null },
+            "parallelDownloads": 3,
+            "retryCount": 2
+        }"#;
+        let parsed: Settings = serde_json::from_str(engine_json).expect("debe tolerar campos ausentes");
+        assert_eq!(parsed.parallel_downloads, 3);
+        assert!(parsed.allow_fallback);
+    }
+
+    #[test]
+    fn engine_and_app_config_use_different_files() {
+        assert_ne!(config_file_path().unwrap(), engine_config_file_path().unwrap());
+    }
 }
