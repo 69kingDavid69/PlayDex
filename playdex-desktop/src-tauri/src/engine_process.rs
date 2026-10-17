@@ -301,28 +301,33 @@ impl EngineProcess {
         config_path: &Path,
         arl: &str,
     ) -> Result<std::process::Child, EngineError> {
-        let vendor_path = Self::find_vendor_path(app);
+        // Tauri devuelve rutas "verbatim" (\\?\C:\...) en Windows. Python no puede importar
+        // módulos desde un PYTHONPATH con ese prefijo (deemix quedaba "no disponible"),
+        // así que todas las rutas que reciben Python se pasan en forma normal.
+        let script_path = plain_path(script_path);
+        let config_path = plain_path(config_path);
+        let vendor_path = Self::find_vendor_path(app).map(|path| plain_path(&path));
         let python_path = vendor_path
             .as_deref()
             .map(Self::build_python_path)
             .transpose()?;
         let mut launch_errors = Vec::new();
 
-        for candidate in Self::python_candidates(script_path) {
-            let mut command = Command::new(&candidate.program);
+        for candidate in Self::python_candidates(&script_path) {
+            let mut command = Command::new(plain_os_string(&candidate.program));
 
             for arg in &candidate.args {
                 command.arg(arg);
             }
 
-            command.arg(script_path);
+            command.arg(&script_path);
             command.env("PYTHONUNBUFFERED", "1");
             command.env("PYTHONDONTWRITEBYTECODE", "1");
-            command.env("DEEMIX_ITUNES_CONFIG_PATH", config_path);
+            command.env("DEEMIX_ITUNES_CONFIG_PATH", &config_path);
             command.env("DEEMIX_ITUNES_ARL", arl);
 
             if let Some(home) = &candidate.home {
-                command.env("PYTHONHOME", home);
+                command.env("PYTHONHOME", plain_path(home));
             }
 
             if let Some(python_path) = &python_path {
@@ -541,4 +546,29 @@ pub async fn cancel_download() -> Result<(), EngineError> {
     Err(EngineError::ProcessLaunchFailed(
         "Engine not available in state".to_string(),
     ))
+}
+
+/// Quita el prefijo `\?\` de las rutas de Windows (no toca las rutas UNC `\?\UNC\...`).
+fn plain_path(path: &Path) -> PathBuf {
+    let text = path.to_string_lossy();
+    match text.strip_prefix(r"\?\") {
+        Some(rest) if !rest.starts_with("UNC\\") => PathBuf::from(rest),
+        _ => path.to_path_buf(),
+    }
+}
+
+fn plain_os_string(value: &OsString) -> OsString {
+    plain_path(Path::new(value)).into_os_string()
+}
+
+#[cfg(test)]
+mod path_tests {
+    use super::*;
+
+    #[test]
+    fn strips_verbatim_prefix() {
+        assert_eq!(plain_path(Path::new(r"\?\C:\Users\x\vendor")), PathBuf::from(r"C:\Users\x\vendor"));
+        assert_eq!(plain_path(Path::new(r"C:\Users\x\vendor")), PathBuf::from(r"C:\Users\x\vendor"));
+        assert_eq!(plain_path(Path::new(r"\?\UNC\server\share")), PathBuf::from(r"\?\UNC\server\share"));
+    }
 }

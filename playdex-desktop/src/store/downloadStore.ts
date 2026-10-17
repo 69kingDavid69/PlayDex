@@ -376,7 +376,9 @@ const useDownloadStore = create<DownloadStore>((set, get) => ({
         set({
           bridgeStatusText: event.download_ready
             ? `Engine listo – Deezer: ${event.deemix_available ? 'OK' : 'No disponible'}`
-            : 'Engine iniciado, falta ARL para descargar',
+            : !event.deemix_available
+              ? 'Engine iniciado, pero deemix no está disponible'
+              : 'Engine iniciado, falta ARL para descargar',
           engineStarted: true,
           downloadReady: event.download_ready
         })
