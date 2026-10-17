@@ -8,11 +8,22 @@ import re
 import shutil
 import sqlite3
 import sys
+import time
+import traceback
 import unicodedata
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
+
+# La app (Rust) habla UTF-8 por stdin/stdout. En Windows Python usaría la página de códigos
+# local (cp1252): "Galás" salía como un byte inválido para Rust, el lector se detenía, la
+# tubería se llenaba y el engine se quedaba colgado; los títulos en cirílico ni se imprimían.
+for _stream in (sys.stdin, sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError, OSError):
+        pass
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
 VENDOR_PATH = SCRIPT_ROOT / "vendor"
@@ -26,8 +37,28 @@ CONFIG_ROOT = CONFIG_PATH.parent
 DB_PATH = Path(os.environ.get("DEEMIX_ITUNES_DB_PATH", str(CONFIG_ROOT / "db.sqlite")))
 
 
+LOG_PATH = CONFIG_ROOT / "engine.log"
+
+
+def log(message: str) -> None:
+    """Diagnóstico a archivo: la app no tiene consola y stderr no se ve."""
+    try:
+        if LOG_PATH.exists() and LOG_PATH.stat().st_size > 512 * 1024:
+            LOG_PATH.write_text("", encoding="utf-8")
+        with LOG_PATH.open("a", encoding="utf-8") as handle:
+            handle.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {message}\n")
+    except Exception:
+        pass
+
+
 def emit(payload: dict[str, Any]) -> None:
-    print(json.dumps(payload, ensure_ascii=False), flush=True)
+    # ensure_ascii=True: el JSON viaja solo con ASCII (los acentos y el cirílico van como
+    # \uXXXX), así no depende de la página de códigos de Windows ni rompe al lector de Rust.
+    try:
+        print(json.dumps(payload, ensure_ascii=True), flush=True)
+    except Exception as exc:
+        # Si la tubería se cierra, un fallo aquí no debe matar la descarga en curso.
+        log(f"emit falló ({type(exc).__name__}: {exc}) evento={payload.get('event')}")
 
 
 def normalize_text(value: str) -> str:
@@ -570,9 +601,13 @@ async def download_playlist(
 
     for track in payload.tracks:
         if runtime.cancel_requested:
+            log("descarga cancelada: se detiene el bucle")
             break
 
+        if not runtime.pause_gate.is_set():
+            log("en pausa: esperando reanudar")
         await runtime.pause_gate.wait()
+        log(f"inicio: {track.artist} - {track.title}")
 
         try:
             existing = None
@@ -653,6 +688,7 @@ async def download_playlist(
             stats["errors"] += 1
 
         except Exception as exc:  # pragma: no cover - defensive bridge path
+            log(f"error en '{track.title}': {type(exc).__name__}: {exc}")
             emit(
                 {
                     "event": "error",
@@ -695,7 +731,27 @@ async def handle_command(
         payload = PlaylistPayload.from_dict(command.get("playlist") or {})
         runtime.cancel_requested = False
         runtime.pause_gate.set()
-        active_download["task"] = asyncio.create_task(download_playlist(payload, config, runtime, adapter))
+        log(f"download_playlist '{payload.name}' con {len(payload.tracks)} canciones")
+        task = asyncio.create_task(download_playlist(payload, config, runtime, adapter))
+
+        def _on_done(finished: "asyncio.Task[None]") -> None:
+            if finished.cancelled():
+                log("la tarea de descarga fue cancelada")
+                return
+            error = finished.exception()
+            if error is not None:
+                log("la tarea de descarga terminó con excepción:\n" + "".join(
+                    traceback.format_exception(type(error), error, error.__traceback__)))
+                emit({
+                    "event": "bridge_error",
+                    "error_code": "DOWNLOAD_TASK_FAILED",
+                    "message": f"La descarga se detuvo: {error}",
+                })
+            else:
+                log("la tarea de descarga terminó")
+
+        task.add_done_callback(_on_done)
+        active_download["task"] = task
         return
 
     if command_name == "pause":

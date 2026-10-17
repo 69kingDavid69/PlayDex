@@ -190,24 +190,30 @@ impl EngineProcess {
 
         // Hilo para leer stdout
         let stdout_thread = thread::spawn(move || {
-            let reader = BufReader::new(stdout);
-            for line in reader.lines() {
-                match line {
-                    Ok(line) => {
+            // Se lee por bytes y se convierte con pérdida: una línea con bytes inválidos no
+            // debe detener el lector (si se detiene, la tubería se llena y el engine se cuelga).
+            let mut reader = BufReader::new(stdout);
+            let mut buffer = Vec::new();
+            loop {
+                buffer.clear();
+                match reader.read_until(b'\n', &mut buffer) {
+                    Ok(0) => break,
+                    Ok(_) => {
+                        let line = String::from_utf8_lossy(&buffer);
                         if line.trim().is_empty() {
                             continue;
                         }
-                        match serde_json::from_str::<EngineEvent>(&line) {
+                        match serde_json::from_str::<EngineEvent>(line.trim()) {
                             Ok(event) => {
                                 let _ = app.emit("engine-event", event);
                             }
                             Err(e) => {
-                                eprintln!("Error parsing engine event: {} - {}", e, line);
+                                log_app(&format!("evento del engine no válido: {e} - {}", line.trim()));
                             }
                         }
                     }
                     Err(e) => {
-                        eprintln!("Error reading from engine stdout: {}", e);
+                        log_app(&format!("error leyendo stdout del engine: {e}"));
                         break;
                     }
                 }
@@ -323,6 +329,8 @@ impl EngineProcess {
             command.arg(&script_path);
             command.env("PYTHONUNBUFFERED", "1");
             command.env("PYTHONDONTWRITEBYTECODE", "1");
+            command.env("PYTHONUTF8", "1");
+            command.env("PYTHONIOENCODING", "utf-8");
             command.env("DEEMIX_ITUNES_CONFIG_PATH", &config_path);
             command.env("DEEMIX_ITUNES_ARL", arl);
 
@@ -591,5 +599,22 @@ mod path_tests {
         let plain = plain_path(&verbatim);
         assert!(!plain.to_string_lossy().starts_with(VERBATIM_PREFIX));
         assert!(plain.exists());
+    }
+}
+
+/// Diagnóstico de la app (no hay consola en release): %APPDATA%/playdex/app.log
+fn log_app(message: &str) {
+    use std::io::Write as _;
+    if let Ok(path) = settings::config_file_path() {
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(dir.join("app.log"))
+            {
+                let _ = writeln!(file, "{message}");
+            }
+        }
     }
 }
