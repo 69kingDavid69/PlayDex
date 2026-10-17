@@ -548,11 +548,15 @@ pub async fn cancel_download() -> Result<(), EngineError> {
     ))
 }
 
-/// Quita el prefijo `\?\` de las rutas de Windows (no toca las rutas UNC `\?\UNC\...`).
+// Prefijo "verbatim" de Windows: dos barras invertidas, '?' y otra barra invertida.
+// Se escribe con \u{5c} (barra invertida) para que ningún editor lo confunda con un escape.
+const VERBATIM_PREFIX: &str = "\u{5c}\u{5c}?\u{5c}";
+
+/// Quita el prefijo verbatim de las rutas de Windows (no toca las rutas UNC verbatim).
 fn plain_path(path: &Path) -> PathBuf {
     let text = path.to_string_lossy();
-    match text.strip_prefix(r"\?\") {
-        Some(rest) if !rest.starts_with("UNC\\") => PathBuf::from(rest),
+    match text.strip_prefix(VERBATIM_PREFIX) {
+        Some(rest) if !rest.starts_with("UNC\u{5c}") => PathBuf::from(rest),
         _ => path.to_path_buf(),
     }
 }
@@ -567,8 +571,25 @@ mod path_tests {
 
     #[test]
     fn strips_verbatim_prefix() {
-        assert_eq!(plain_path(Path::new(r"\?\C:\Users\x\vendor")), PathBuf::from(r"C:\Users\x\vendor"));
-        assert_eq!(plain_path(Path::new(r"C:\Users\x\vendor")), PathBuf::from(r"C:\Users\x\vendor"));
-        assert_eq!(plain_path(Path::new(r"\?\UNC\server\share")), PathBuf::from(r"\?\UNC\server\share"));
+        let verbatim = format!("{VERBATIM_PREFIX}C:\u{5c}Users\u{5c}x\u{5c}vendor");
+        assert_eq!(verbatim.chars().take(4).collect::<String>(), "\u{5c}\u{5c}?\u{5c}");
+        assert_eq!(plain_path(Path::new(&verbatim)), PathBuf::from("C:\u{5c}Users\u{5c}x\u{5c}vendor"));
+
+        let normal = "C:\u{5c}Users\u{5c}x\u{5c}vendor";
+        assert_eq!(plain_path(Path::new(normal)), PathBuf::from(normal));
+
+        let unc = format!("{VERBATIM_PREFIX}UNC\u{5c}server\u{5c}share");
+        assert_eq!(plain_path(Path::new(&unc)), PathBuf::from(&unc));
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn strips_prefix_from_a_real_canonicalized_path() {
+        // canonicalize devuelve rutas verbatim en Windows, igual que resource_dir() de Tauri
+        let verbatim = std::fs::canonicalize(std::env::temp_dir()).unwrap();
+        assert!(verbatim.to_string_lossy().starts_with(VERBATIM_PREFIX));
+        let plain = plain_path(&verbatim);
+        assert!(!plain.to_string_lossy().starts_with(VERBATIM_PREFIX));
+        assert!(plain.exists());
     }
 }
