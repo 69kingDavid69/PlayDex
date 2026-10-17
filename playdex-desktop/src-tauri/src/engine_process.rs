@@ -331,7 +331,16 @@ impl EngineProcess {
 
             command.stdin(Stdio::piped());
             command.stdout(Stdio::piped());
-            command.stderr(Stdio::inherit());
+            // En release la app no tiene consola: heredar stderr no aporta nada
+            command.stderr(if cfg!(debug_assertions) { Stdio::inherit() } else { Stdio::null() });
+
+            // python.exe es una app de consola: sin esta bandera Windows abre una ventana
+            // de consola cada vez que se lanza el engine (CREATE_NO_WINDOW).
+            #[cfg(target_os = "windows")]
+            {
+                use std::os::windows::process::CommandExt;
+                command.creation_flags(0x0800_0000);
+            }
 
             match command.spawn() {
                 Ok(child) => return Ok(child),
