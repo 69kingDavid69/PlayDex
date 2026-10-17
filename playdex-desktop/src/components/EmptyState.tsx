@@ -1,100 +1,89 @@
 import useDownloadStore from '../store/downloadStore'
 
+const STEPS = [
+  { title: 'Exporta de iTunes', text: 'Archivo → Biblioteca → Exportar biblioteca como XML.' },
+  { title: 'Exporta de Spotify', text: null },
+  { title: 'Conecta Deezer', text: 'Pega tu token ARL en Ajustes para poder descargar.' },
+]
+
 export default function EmptyState() {
   const { importLibraryXML, importCSV } = useDownloadStore()
 
   return (
-    <div className="flex-1 flex items-center justify-center p-8 animate-fade-in">
-      <div className="max-w-lg text-center">
-        {/* Animated icon */}
-        <div className="relative mb-8 inline-block">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-accent-500/20 to-accent-600/10 flex items-center justify-center mx-auto animate-pulse-glow">
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" className="text-accent-400">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
-              <circle cx="12" cy="12" r="3" fill="currentColor" />
-              <path d="M12 2a10 10 0 0 1 0 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </div>
+    <div className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center px-10 pb-10 animate-fade-in">
+      <div className="w-full max-w-[720px] flex flex-col items-center text-center">
+        <div className="w-28 h-28 rounded-[32px] bg-[#2a0d08] border border-[#4a1a10] flex items-center justify-center animate-pulse-glow">
+          <svg width="64" height="64" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <circle cx="16" cy="16" r="14" stroke="#e8d8c8" strokeWidth="1.6" />
+            <circle cx="16" cy="16" r="5" fill="#ff2a00" />
+            <path d="M16 2a14 14 0 0 1 0 28" stroke="#ff2a00" strokeWidth="2.4" strokeLinecap="round" />
+          </svg>
         </div>
 
-        <h1 className="text-3xl font-extrabold text-white mb-3 tracking-tight">
-          Bienvenido a PlayDex
+        <h1 className="font-display text-[48px] leading-[1.05] font-bold tracking-tight text-white mt-9 mb-3">
+          Tu música, en alta calidad
         </h1>
-        <p className="text-surface-200 mb-10 text-sm leading-relaxed max-w-sm mx-auto">
-          Importa tus playlists desde iTunes (XML) o Spotify (CSV) y descárgalas en alta calidad desde Deezer.
+        <p className="max-w-[520px] text-base leading-relaxed text-surface-200">
+          Importa tus playlists de iTunes o Spotify y descárgalas en FLAC o MP3 320 desde Deezer.
         </p>
-        
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+
+        <div className="grid grid-cols-2 gap-4 w-full mt-10">
           <button
             onClick={importLibraryXML}
-            className="group flex items-center justify-center gap-3 px-6 py-4 bg-surface-700 border border-surface-600 rounded-2xl hover:border-accent-500/40 hover:bg-surface-600 transition-all duration-200"
+            className="group flex items-center gap-4 p-5 rounded-[20px] bg-surface-700 border border-surface-500 text-left cursor-pointer transition-all duration-150 hover:border-accent-500/50 hover:bg-surface-600"
           >
-            <div className="w-10 h-10 rounded-xl bg-accent-500/15 flex items-center justify-center shrink-0">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-accent-400">
+            <span className="w-[52px] h-[52px] shrink-0 rounded-[14px] bg-[#2a0d08] flex items-center justify-center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff2a00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" />
               </svg>
-            </div>
-            <div className="text-left">
-              <div className="text-sm font-semibold text-white group-hover:text-accent-300 transition-colors">
-                Importar XML
-              </div>
-              <div className="text-[11px] text-surface-300">
-                iTunes / Apple Music
-              </div>
-            </div>
+            </span>
+            <span>
+              <span className="block text-base font-bold text-white">Importar XML</span>
+              <span className="block text-[13px] text-surface-200 mt-0.5">iTunes / Apple Music</span>
+            </span>
           </button>
 
           <button
             onClick={importCSV}
-            className="group flex items-center justify-center gap-3 px-6 py-4 bg-surface-700 border border-surface-600 rounded-2xl hover:border-success-500/40 hover:bg-surface-600 transition-all duration-200"
+            className="group flex items-center gap-4 p-5 rounded-[20px] bg-surface-700 border border-surface-500 text-left cursor-pointer transition-all duration-150 hover:border-info-500/50 hover:bg-surface-600"
           >
-            <div className="w-10 h-10 rounded-xl bg-success-500/15 flex items-center justify-center shrink-0">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-success-400">
+            <span className="w-[52px] h-[52px] shrink-0 rounded-[14px] bg-[#1c1230] flex items-center justify-center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a46bff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" />
                 <line x1="8" y1="13" x2="16" y2="13" />
                 <line x1="8" y1="17" x2="16" y2="17" />
               </svg>
-            </div>
-            <div className="text-left">
-              <div className="text-sm font-semibold text-white group-hover:text-success-300 transition-colors">
-                Importar CSV
-              </div>
-              <div className="text-[11px] text-surface-300">
-                Spotify (Exportify)
-              </div>
-            </div>
+            </span>
+            <span>
+              <span className="block text-base font-bold text-white">Importar CSV</span>
+              <span className="block text-[13px] text-surface-200 mt-0.5">Spotify (Exportify)</span>
+            </span>
           </button>
         </div>
 
-        {/* Getting started card */}
-        <div className="mt-10 p-5 rounded-2xl bg-surface-700/40 border border-surface-600/50 text-left max-w-md mx-auto">
-          <h3 className="text-sm font-semibold text-surface-100 mb-3 flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent-400">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 16v-4" />
-              <path d="M12 8h.01" />
-            </svg>
-            ¿Primera vez?
-          </h3>
-          <ol className="space-y-2 text-xs text-surface-300 leading-relaxed">
-            <li className="flex gap-2">
-              <span className="text-accent-400 font-bold shrink-0">1.</span>
-              Exporta tu biblioteca de iTunes/Music como XML (Archivo → Biblioteca → Exportar…)
-            </li>
-            <li className="flex gap-2">
-              <span className="text-accent-400 font-bold shrink-0">2.</span>
-              Exporta tus playlists de Spotify con{' '}
-              <a href="https://exportify.net" className="text-accent-400 hover:text-accent-300 underline underline-offset-2" target="_blank" rel="noreferrer">
-                Exportify
-              </a>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-accent-400 font-bold shrink-0">3.</span>
-              Configura tu token ARL de Deezer en Ajustes
-            </li>
-          </ol>
+        <div className="w-full mt-4 p-6 rounded-[20px] bg-surface-800 border border-surface-500/60 text-left">
+          <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-surface-300 mb-[18px]">¿Primera vez?</div>
+          <div className="grid grid-cols-3 gap-6">
+            {STEPS.map((step, i) => (
+              <div key={step.title}>
+                <div className="w-7 h-7 rounded-full bg-[#2a0d08] text-accent-400 text-[13px] font-bold flex items-center justify-center">{i + 1}</div>
+                <div className="text-sm font-bold text-white mt-3 mb-1.5">{step.title}</div>
+                <div className="text-[13px] leading-relaxed text-surface-200">
+                  {step.text ?? (
+                    <>
+                      Usa{' '}
+                      <a href="https://exportify.net" className="text-accent-400 hover:text-accent-300 underline underline-offset-2" target="_blank" rel="noreferrer">
+                        Exportify
+                      </a>{' '}
+                      para guardar tus playlists en CSV.
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -6,68 +6,58 @@ import Settings from './components/Settings'
 import EmptyState from './components/EmptyState'
 import useDownloadStore from './store/downloadStore'
 
+const drag = { WebkitAppRegion: 'drag' } as React.CSSProperties
+const noDrag = { WebkitAppRegion: 'no-drag' } as React.CSSProperties
+
 function App() {
-  const { bootstrapIfNeeded, playlists, bridgeStatusText, lastErrorMessage, engineStarted, restartEngine } = useDownloadStore()
+  const { bootstrapIfNeeded, playlists, selectedPlaylist, bridgeStatusText, lastErrorMessage, engineStarted, restartEngine } = useDownloadStore()
 
   useEffect(() => {
     bootstrapIfNeeded()
   }, [])
 
   const hasPlaylists = playlists.length > 0
+  const current = selectedPlaylist()
 
   return (
-    <div className="flex flex-col h-screen bg-surface-900">
-      {/* ── Top Bar ── */}
-      <header className="flex items-center justify-between h-12 px-4 border-b border-surface-700 bg-surface-800/80 backdrop-blur-sm shrink-0"
-              style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
-        <div className="flex items-center gap-3" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          <div className="flex items-center gap-2">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="text-accent-400">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
-              <circle cx="12" cy="12" r="3" fill="currentColor" />
-              <path d="M12 2a10 10 0 0 1 0 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            <span className="text-sm font-bold tracking-wide text-white">PlayDex</span>
+    <div className="flex h-screen bg-surface-900">
+      <PlaylistSidebar />
+
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* ── Top Bar ── */}
+        <header className="flex items-center justify-between h-16 px-10 shrink-0" style={drag}>
+          <div className="text-[13px] font-semibold text-surface-300" style={noDrag}>
+            Biblioteca
+            {current && (
+              <>
+                <span className="px-1.5">/</span>
+                <span className="text-white">{current.name}</span>
+              </>
+            )}
           </div>
-        </div>
-        
-        <div className="flex items-center gap-3" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          {!engineStarted && (
-            <button 
-              onClick={restartEngine}
-              className="text-xs bg-surface-700 hover:bg-surface-600 px-2.5 py-1 rounded-md text-surface-200 hover:text-white transition-colors border border-surface-600 shadow-sm"
-              title="Reintentar inicialización"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline-block mr-1.5 -mt-0.5">
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-8.4l5.67 1.33" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Reiniciar Engine
-            </button>
-          )}
-          <StatusPill text={bridgeStatusText} />
-          <SettingsButton />
-        </div>
-      </header>
 
-      {/* ── Error Banner ── */}
-      {lastErrorMessage && <ErrorBanner message={lastErrorMessage} />}
+          <div className="flex items-center gap-3" style={noDrag}>
+            {!engineStarted && (
+              <button onClick={restartEngine} className="btn-secondary !py-1.5 !px-3.5 !text-xs" title="Reintentar inicialización">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="inline-block mr-1.5 -mt-0.5">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-8.4l5.67 1.33" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Reiniciar engine
+              </button>
+            )}
+            <StatusPill text={bridgeStatusText} />
+            <SettingsButton />
+          </div>
+        </header>
 
-      {/* ── Main Content: 3-Panel Layout ── */}
-      <div className="flex flex-1 overflow-hidden">
-        <PlaylistSidebar />
-        
-        <main className="flex-1 overflow-hidden flex flex-col border-r border-surface-700">
-          {hasPlaylists ? (
-            <TrackList />
-          ) : (
-            <EmptyState />
-          )}
+        {lastErrorMessage && <ErrorBanner message={lastErrorMessage} />}
+
+        <main className="flex-1 min-h-0 flex flex-col">
+          {hasPlaylists ? <TrackList /> : <EmptyState />}
         </main>
-        
-        <DownloadQueue />
       </div>
 
-      {/* ── Settings Modal ── */}
+      <DownloadQueue />
       <Settings />
     </div>
   )
@@ -76,28 +66,34 @@ function App() {
 function StatusPill({ text }: { text: string }) {
   const isReady = text.includes('listo') || text.includes('OK')
   const isError = text.includes('Error') || text.includes('error')
-  
+
+  const tone = isError
+    ? 'bg-danger-500/10 border-danger-500/25 text-danger-400'
+    : isReady
+      ? 'bg-accent-500/10 border-accent-500/20 text-accent-400'
+      : 'bg-surface-700 border-surface-500 text-surface-200'
+  const dot = isError ? 'bg-danger-500' : isReady ? 'bg-accent-500' : 'bg-surface-200 animate-pulse'
+
   return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium
-      ${isError ? 'bg-danger-500/15 text-danger-400' : isReady ? 'bg-success-500/15 text-success-400' : 'bg-surface-600 text-surface-200'}`}>
-      <div className={`w-1.5 h-1.5 rounded-full ${isError ? 'bg-danger-500' : isReady ? 'bg-success-500' : 'bg-surface-300 animate-pulse'}`} />
-      <span className="truncate max-w-48">{text}</span>
+    <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-semibold ${tone}`}>
+      <span className={`w-[7px] h-[7px] rounded-full ${dot}`} />
+      <span className="truncate max-w-56">{text}</span>
     </div>
   )
 }
 
 function SettingsButton() {
   const openSettings = useDownloadStore(s => s.openSettings)
-  
+
   return (
-    <button
-      onClick={openSettings}
-      className="p-2 rounded-lg text-surface-200 hover:text-white hover:bg-surface-600 transition-all duration-200"
-      title="Ajustes"
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    <button onClick={openSettings} className="icon-btn" title="Ajustes" aria-label="Ajustes">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="4" y1="6" x2="20" y2="6" />
+        <line x1="4" y1="12" x2="20" y2="12" />
+        <line x1="4" y1="18" x2="20" y2="18" />
+        <circle cx="9" cy="6" r="2.2" fill="#140c0d" />
+        <circle cx="15" cy="12" r="2.2" fill="#140c0d" />
+        <circle cx="8" cy="18" r="2.2" fill="#140c0d" />
       </svg>
     </button>
   )
@@ -105,18 +101,18 @@ function SettingsButton() {
 
 function ErrorBanner({ message }: { message: string }) {
   const clearError = () => useDownloadStore.setState({ lastErrorMessage: null })
-  
+
   return (
-    <div className="flex items-center justify-between px-4 py-2 bg-danger-500/10 border-b border-danger-500/20 animate-fade-in shrink-0">
-      <div className="flex items-center gap-2">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-danger-400">
+    <div className="mx-10 mb-3 flex items-center justify-between gap-4 px-4 py-3 rounded-2xl bg-danger-500/10 border border-danger-500/25 animate-fade-in shrink-0">
+      <div className="flex items-center gap-3 min-w-0">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-danger-400 shrink-0">
           <circle cx="12" cy="12" r="10" />
-          <line x1="15" y1="9" x2="9" y2="15" />
-          <line x1="9" y1="9" x2="15" y2="15" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
-        <span className="text-sm text-danger-400">{message}</span>
+        <span className="text-sm text-danger-400 truncate" title={message}>{message}</span>
       </div>
-      <button onClick={clearError} className="text-danger-400 hover:text-white text-xs font-medium px-2 py-1 rounded hover:bg-danger-500/20 transition-colors">
+      <button onClick={clearError} className="btn-ghost !py-1 !px-3 !text-xs shrink-0">
         Cerrar
       </button>
     </div>

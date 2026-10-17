@@ -32,13 +32,14 @@ export default function Settings() {
         onClick={e => e.stopPropagation()}
       >
         {/* ── Header ── */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-4">
-          <h2 className="text-lg font-bold text-white">Ajustes</h2>
-          <button 
-            onClick={closeSettings} 
-            className="p-1.5 rounded-lg text-surface-300 hover:text-white hover:bg-surface-600 transition-all"
+        <div className="flex items-center justify-between px-8 pt-7 pb-2">
+          <h2 className="font-display text-[26px] font-bold tracking-tight text-white">Ajustes</h2>
+          <button
+            onClick={closeSettings}
+            className="icon-btn"
+            aria-label="Cerrar"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -46,7 +47,7 @@ export default function Settings() {
         </div>
 
         {/* ── Tabs ── */}
-        <div className="px-6 pb-4">
+        <div className="px-8 pt-4 pb-2">
           <div className="tab-bar">
             <button 
               className={`tab-item ${activeTab === 'general' ? 'tab-item-active' : ''}`}
@@ -70,7 +71,7 @@ export default function Settings() {
         </div>
 
         {/* ── Tab Content ── */}
-        <div className="px-6 pb-6 min-h-[260px]">
+        <div className="px-8 pt-6 pb-4 min-h-[300px]">
           {activeTab === 'general' && <GeneralTab 
             downloadPath={downloadPath} 
             setDownloadPath={setDownloadPath}
@@ -91,7 +92,7 @@ export default function Settings() {
         </div>
 
         {/* ── Footer ── */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-surface-700">
+        <div className="flex justify-end gap-3 px-8 py-6 border-t border-surface-500/60">
           <button onClick={closeSettings} className="btn-secondary">
             Cancelar
           </button>
@@ -144,54 +145,65 @@ function CalidadTab({ preferredFormat, setPreferredFormat, allowFallback, setAll
   setRejectBelow320: (v: boolean) => void
 }) {
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-7 animate-fade-in">
       <div>
-        <label className="block text-sm font-medium text-surface-100 mb-2">
-          Formato de audio preferido
-        </label>
-        <select 
-          value={preferredFormat}
-          onChange={e => setPreferredFormat(e.target.value as 'FLAC' | 'MP3_320')}
-          className="select-field"
-        >
-          <option value="FLAC">FLAC (lossless)</option>
-          <option value="MP3_320">MP3 320 kbps</option>
-        </select>
+        <div className="text-sm font-bold text-white mb-1">Formato de audio preferido</div>
+        <p className="text-[13px] text-surface-200 mb-3.5">Elige cómo se guardan tus canciones.</p>
+        <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Formato de audio preferido">
+          {([
+            { value: 'FLAC', title: 'FLAC', note: 'Sin pérdida · archivos grandes' },
+            { value: 'MP3_320', title: 'MP3 320 kbps', note: 'Compatible · más liviano' },
+          ] as const).map(option => {
+            const selected = preferredFormat === option.value
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setPreferredFormat(option.value)}
+                className={`flex items-center gap-3.5 px-5 py-[18px] rounded-[18px] border-2 text-left cursor-pointer transition-colors ${
+                  selected ? 'border-accent-500 bg-[#1d0b09]' : 'border-surface-500 bg-surface-700 hover:border-surface-400'
+                }`}
+              >
+                <span className={`w-[22px] h-[22px] shrink-0 rounded-full border-2 flex items-center justify-center ${selected ? 'border-accent-500' : 'border-surface-400'}`}>
+                  {selected && <span className="w-2.5 h-2.5 rounded-full bg-accent-500" />}
+                </span>
+                <span>
+                  <span className="block text-[15px] font-bold text-white">{option.title}</span>
+                  <span className="block text-xs text-surface-200 mt-0.5">{option.note}</span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
-      
+
       <div className="space-y-3">
-        <label className="flex items-center gap-3 cursor-pointer group">
-          <input 
-            type="checkbox" 
-            checked={allowFallback} 
-            onChange={e => setAllowFallback(e.target.checked)}
-            className="checkbox-custom"
-          />
-          <div>
-            <span className="text-sm text-surface-100 group-hover:text-white transition-colors">
-              Permitir fallback a calidad inferior
-            </span>
-            <p className="text-[11px] text-surface-400 mt-0.5">
-              Si FLAC no está disponible, usar MP3 320
-            </p>
+        <label className="flex items-center gap-4 px-5 py-4 rounded-[18px] bg-surface-700 border border-surface-500/70 cursor-pointer">
+          <div className="flex-1">
+            <div className="text-sm font-bold text-white">Permitir calidad inferior</div>
+            <p className="text-xs text-surface-200 mt-0.5">Si FLAC no está disponible, usar MP3 320.</p>
           </div>
+          <input
+            type="checkbox"
+            checked={allowFallback}
+            onChange={e => setAllowFallback(e.target.checked)}
+            className="toggle"
+          />
         </label>
 
-        <label className="flex items-center gap-3 cursor-pointer group">
-          <input 
-            type="checkbox" 
-            checked={rejectBelow320} 
-            onChange={e => setRejectBelow320(e.target.checked)}
-            className="checkbox-custom"
-          />
-          <div>
-            <span className="text-sm text-surface-100 group-hover:text-white transition-colors">
-              Rechazar por debajo de 320 kbps
-            </span>
-            <p className="text-[11px] text-surface-400 mt-0.5">
-              No descargar tracks con calidad inferior
-            </p>
+        <label className="flex items-center gap-4 px-5 py-4 rounded-[18px] bg-surface-700 border border-surface-500/70 cursor-pointer">
+          <div className="flex-1">
+            <div className="text-sm font-bold text-white">Rechazar por debajo de 320 kbps</div>
+            <p className="text-xs text-surface-200 mt-0.5">No descargar pistas con calidad inferior.</p>
           </div>
+          <input
+            type="checkbox"
+            checked={rejectBelow320}
+            onChange={e => setRejectBelow320(e.target.checked)}
+            className="toggle"
+          />
         </label>
       </div>
     </div>

@@ -146,7 +146,7 @@ impl EngineProcess {
             .unwrap_or_default();
 
         // Crear configuración del engine
-        let config_path = settings::config_file_path()
+        let config_path = settings::engine_config_file_path()
             .map_err(|e| EngineError::ProcessLaunchFailed(e.to_string()))?;
         let config_dir = config_path.parent().unwrap();
         std::fs::create_dir_all(config_dir)
@@ -190,24 +190,30 @@ impl EngineProcess {
 
         // Hilo para leer stdout
         let stdout_thread = thread::spawn(move || {
-            let reader = BufReader::new(stdout);
-            for line in reader.lines() {
-                match line {
-                    Ok(line) => {
+            // Se lee por bytes y se convierte con pérdida: una línea con bytes inválidos no
+            // debe detener el lector (si se detiene, la tubería se llena y el engine se cuelga).
+            let mut reader = BufReader::new(stdout);
+            let mut buffer = Vec::new();
+            loop {
+                buffer.clear();
+                match reader.read_until(b'\n', &mut buffer) {
+                    Ok(0) => break,
+                    Ok(_) => {
+                        let line = String::from_utf8_lossy(&buffer);
                         if line.trim().is_empty() {
                             continue;
                         }
-                        match serde_json::from_str::<EngineEvent>(&line) {
+                        match serde_json::from_str::<EngineEvent>(line.trim()) {
                             Ok(event) => {
                                 let _ = app.emit("engine-event", event);
                             }
                             Err(e) => {
-                                eprintln!("Error parsing engine event: {} - {}", e, line);
+                                log_app(&format!("evento del engine no válido: {e} - {}", line.trim()));
                             }
                         }
                     }
                     Err(e) => {
-                        eprintln!("Error reading from engine stdout: {}", e);
+                        log_app(&format!("error leyendo stdout del engine: {e}"));
                         break;
                     }
                 }
@@ -301,28 +307,35 @@ impl EngineProcess {
         config_path: &Path,
         arl: &str,
     ) -> Result<std::process::Child, EngineError> {
-        let vendor_path = Self::find_vendor_path(app);
+        // Tauri devuelve rutas "verbatim" (\\?\C:\...) en Windows. Python no puede importar
+        // módulos desde un PYTHONPATH con ese prefijo (deemix quedaba "no disponible"),
+        // así que todas las rutas que reciben Python se pasan en forma normal.
+        let script_path = plain_path(script_path);
+        let config_path = plain_path(config_path);
+        let vendor_path = Self::find_vendor_path(app).map(|path| plain_path(&path));
         let python_path = vendor_path
             .as_deref()
             .map(Self::build_python_path)
             .transpose()?;
         let mut launch_errors = Vec::new();
 
-        for candidate in Self::python_candidates(script_path) {
-            let mut command = Command::new(&candidate.program);
+        for candidate in Self::python_candidates(&script_path) {
+            let mut command = Command::new(plain_os_string(&candidate.program));
 
             for arg in &candidate.args {
                 command.arg(arg);
             }
 
-            command.arg(script_path);
+            command.arg(&script_path);
             command.env("PYTHONUNBUFFERED", "1");
             command.env("PYTHONDONTWRITEBYTECODE", "1");
-            command.env("DEEMIX_ITUNES_CONFIG_PATH", config_path);
+            command.env("PYTHONUTF8", "1");
+            command.env("PYTHONIOENCODING", "utf-8");
+            command.env("DEEMIX_ITUNES_CONFIG_PATH", &config_path);
             command.env("DEEMIX_ITUNES_ARL", arl);
 
             if let Some(home) = &candidate.home {
-                command.env("PYTHONHOME", home);
+                command.env("PYTHONHOME", plain_path(home));
             }
 
             if let Some(python_path) = &python_path {
@@ -331,7 +344,16 @@ impl EngineProcess {
 
             command.stdin(Stdio::piped());
             command.stdout(Stdio::piped());
-            command.stderr(Stdio::inherit());
+            // En release la app no tiene consola: heredar stderr no aporta nada
+            command.stderr(if cfg!(debug_assertions) { Stdio::inherit() } else { Stdio::null() });
+
+            // python.exe es una app de consola: sin esta bandera Windows abre una ventana
+            // de consola cada vez que se lanza el engine (CREATE_NO_WINDOW).
+            #[cfg(target_os = "windows")]
+            {
+                use std::os::windows::process::CommandExt;
+                command.creation_flags(0x0800_0000);
+            }
 
             match command.spawn() {
                 Ok(child) => return Ok(child),
@@ -532,4 +554,67 @@ pub async fn cancel_download() -> Result<(), EngineError> {
     Err(EngineError::ProcessLaunchFailed(
         "Engine not available in state".to_string(),
     ))
+}
+
+// Prefijo "verbatim" de Windows: dos barras invertidas, '?' y otra barra invertida.
+// Se escribe con \u{5c} (barra invertida) para que ningún editor lo confunda con un escape.
+const VERBATIM_PREFIX: &str = "\u{5c}\u{5c}?\u{5c}";
+
+/// Quita el prefijo verbatim de las rutas de Windows (no toca las rutas UNC verbatim).
+fn plain_path(path: &Path) -> PathBuf {
+    let text = path.to_string_lossy();
+    match text.strip_prefix(VERBATIM_PREFIX) {
+        Some(rest) if !rest.starts_with("UNC\u{5c}") => PathBuf::from(rest),
+        _ => path.to_path_buf(),
+    }
+}
+
+fn plain_os_string(value: &OsString) -> OsString {
+    plain_path(Path::new(value)).into_os_string()
+}
+
+#[cfg(test)]
+mod path_tests {
+    use super::*;
+
+    #[test]
+    fn strips_verbatim_prefix() {
+        let verbatim = format!("{VERBATIM_PREFIX}C:\u{5c}Users\u{5c}x\u{5c}vendor");
+        assert_eq!(verbatim.chars().take(4).collect::<String>(), "\u{5c}\u{5c}?\u{5c}");
+        assert_eq!(plain_path(Path::new(&verbatim)), PathBuf::from("C:\u{5c}Users\u{5c}x\u{5c}vendor"));
+
+        let normal = "C:\u{5c}Users\u{5c}x\u{5c}vendor";
+        assert_eq!(plain_path(Path::new(normal)), PathBuf::from(normal));
+
+        let unc = format!("{VERBATIM_PREFIX}UNC\u{5c}server\u{5c}share");
+        assert_eq!(plain_path(Path::new(&unc)), PathBuf::from(&unc));
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn strips_prefix_from_a_real_canonicalized_path() {
+        // canonicalize devuelve rutas verbatim en Windows, igual que resource_dir() de Tauri
+        let verbatim = std::fs::canonicalize(std::env::temp_dir()).unwrap();
+        assert!(verbatim.to_string_lossy().starts_with(VERBATIM_PREFIX));
+        let plain = plain_path(&verbatim);
+        assert!(!plain.to_string_lossy().starts_with(VERBATIM_PREFIX));
+        assert!(plain.exists());
+    }
+}
+
+/// Diagnóstico de la app (no hay consola en release): %APPDATA%/playdex/app.log
+fn log_app(message: &str) {
+    use std::io::Write as _;
+    if let Ok(path) = settings::config_file_path() {
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(dir.join("app.log"))
+            {
+                let _ = writeln!(file, "{message}");
+            }
+        }
+    }
 }
